@@ -308,6 +308,140 @@ body {
   cursor: pointer; transition: all 0.15s; margin-bottom: 12px;
 }
 .bridge-btn:hover { background: rgba(163,113,247,0.22); }
+
+/* ═══════════════════════════════════════
+   PAGE 3 — Checklist
+═══════════════════════════════════════ */
+.checklist-page {
+  flex: 1; overflow-y: auto;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 28px 16px;
+  font-family: Inter,system-ui,sans-serif;
+}
+.cl-container { width: 100%; max-width: 760px; }
+.cl-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+.cl-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+
+/* Progress bar */
+.cl-progress-wrap { margin-bottom: 24px; }
+.cl-progress-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.cl-progress-label { font-size: 12px; color: var(--text-muted); }
+.cl-progress-count { font-size: 12px; font-weight: 600; color: var(--teal); }
+.cl-bar-bg { width: 100%; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.cl-bar-fill { height: 100%; background: linear-gradient(90deg, #39d353, #2f81f7); border-radius: 3px; transition: width 0.4s ease; }
+
+/* Step cards */
+.cl-step {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.cl-step.done { border-color: rgba(57,211,83,0.3); }
+.cl-step.done .cl-step-header { background: rgba(57,211,83,0.05); }
+
+.cl-step-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+.cl-step-header:hover { background: rgba(255,255,255,0.03); }
+
+.cl-num {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+  background: var(--blue-dim); color: var(--blue);
+  border: 1px solid rgba(47,129,247,0.25);
+  transition: all 0.3s;
+}
+.cl-step.done .cl-num { background: var(--teal-dim); color: var(--teal); border-color: rgba(57,211,83,0.3); }
+
+.cl-step-title { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; line-height: 1.4; }
+.cl-step.done .cl-step-title { color: var(--text-muted); text-decoration: line-through; text-decoration-color: rgba(57,211,83,0.4); }
+
+.cl-check {
+  width: 22px; height: 22px; border-radius: 6px;
+  border: 1.5px solid var(--border2);
+  background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.2s;
+  font-size: 13px; cursor: pointer;
+}
+.cl-step.done .cl-check { background: var(--teal); border-color: var(--teal); }
+
+.cl-chevron { color: var(--text-dim); font-size: 11px; transition: transform 0.2s; flex-shrink: 0; }
+.cl-step.open .cl-chevron { transform: rotate(90deg); }
+
+/* Step body */
+.cl-step-body {
+  display: none;
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--border);
+}
+.cl-step.open .cl-step-body { display: block; }
+
+.cl-tool-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--text-dim); font-weight: 600; margin: 12px 0 6px;
+}
+
+/* Sub-checklist */
+.cl-subtasks { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.cl-subtask {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 10px; border-radius: 8px;
+  background: var(--surface2); cursor: pointer;
+  transition: background 0.15s;
+}
+.cl-subtask:hover { background: rgba(255,255,255,0.04); }
+.cl-subtask.done { opacity: 0.55; }
+.cl-subtask-cb {
+  width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; margin-top: 1px;
+  border: 1.5px solid var(--border2); background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; transition: all 0.2s;
+}
+.cl-subtask.done .cl-subtask-cb { background: var(--teal); border-color: var(--teal); }
+.cl-subtask-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+.cl-subtask.done .cl-subtask-text { color: var(--text-muted); text-decoration: line-through; }
+
+/* Code block */
+.cl-code {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 14px;
+  font-family: 'SF Mono','Fira Code',monospace; font-size: 12px;
+  color: var(--text-muted); white-space: pre; overflow-x: auto;
+  margin-top: 8px; line-height: 1.7;
+  position: relative;
+}
+.cl-code .kw { color: var(--blue); }
+.cl-code .val { color: var(--teal); }
+.cl-code .cmt { color: var(--text-dim); }
+
+/* Note / tip box */
+.cl-note {
+  background: var(--amber-dim); border: 1px solid rgba(227,179,65,0.2);
+  border-radius: 8px; padding: 10px 14px; margin-top: 10px;
+  font-size: 12px; color: var(--amber); line-height: 1.6;
+}
+.cl-tip {
+  background: var(--blue-dim); border: 1px solid rgba(47,129,247,0.2);
+  border-radius: 8px; padding: 10px 14px; margin-top: 10px;
+  font-size: 12px; color: var(--blue); line-height: 1.6;
+}
+
+/* Reset btn */
+.cl-reset-btn {
+  font-family: inherit; font-size: 12px; padding: 6px 14px;
+  border-radius: 6px; border: 1px solid var(--border2);
+  background: var(--surface2); color: var(--text-muted);
+  cursor: pointer; transition: all 0.15s; margin-top: 16px;
+}
+.cl-reset-btn:hover { color: var(--text); background: var(--surface); }
 </style>
 </head>
 <body>
@@ -325,6 +459,7 @@ body {
 <div class="tabs">
   <button class="tab active" onclick="switchTab('swarm')">🖥️ Swarm Terminal</button>
   <button class="tab" onclick="switchTab('raft')">⚡ Raft Election</button>
+  <button class="tab" onclick="switchTab('checklist')">🔍 Health Check Terminal</button>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -428,16 +563,65 @@ body {
 </div>
 </div>
 
+<!-- ══════════════════════════════════════
+     PAGE 3: Health Check Terminal
+══════════════════════════════════════ -->
+<div class="page" id="page-checklist">
+<div class="layout">
+  <!-- Terminal pane -->
+  <div class="terminal-pane" onclick="document.getElementById('hc-input').focus()">
+    <div class="pane-header">
+      <div class="dot" style="background:#ff5f57"></div>
+      <div class="dot" style="background:#febc2e"></div>
+      <div class="dot" style="background:#28c840"></div>
+      <span style="margin-left:4px">Health Check Terminal — manager-node1</span>
+    </div>
+    <div class="terminal-output" id="hc-out"></div>
+    <div class="input-row">
+      <span class="input-prompt">admin@manager-node1:~$</span>
+      <input id="hc-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="พิมพ์คำสั่งหรือกด Tab..."/>
+    </div>
+    <div class="quick-cmds">
+      <span style="font-size:11px;color:var(--text-dim);align-self:center;font-family:Inter,sans-serif">Step:</span>
+      <button class="qbtn cat-node" onclick="hcRun('docker node ls')">01 node ls</button>
+      <button class="qbtn cat-service" onclick="hcRun('docker service ls')">02 service ls</button>
+      <button class="qbtn cat-service" onclick="hcRun('docker service ps consent-v2')">03 service ps</button>
+      <button class="qbtn cat-init" onclick="hcRun('docker stats --no-stream')">04 stats</button>
+      <button class="qbtn cat-init" onclick="hcRun('docker system df')">04 system df</button>
+      <button class="qbtn cat-init" onclick="hcRun('df -h /')">04 df -h</button>
+      <button class="qbtn" onclick="hcRun('uptime')">05 uptime</button>
+      <button class="qbtn" onclick="hcRun('systemctl is-system-running')">05 is-running</button>
+      <button class="qbtn" onclick="hcRun('systemctl status docker')">05 docker status</button>
+      <button class="qbtn cat-danger" onclick="hcRun('systemctl --failed')">05 --failed</button>
+      <button class="qbtn" onclick="hcRun('help')">help</button>
+      <button class="qbtn cat-danger" onclick="hcRun('clear')">clear</button>
+    </div>
+  </div>
+
+  <!-- Status panel -->
+  <div class="viz-pane">
+    <div class="pane-header"><span>Health Status</span></div>
+    <div class="viz-body" id="hc-viz">
+      <div style="text-align:center;padding:40px 16px;font-family:Inter,sans-serif;color:var(--text-dim);font-size:13px;">
+        <div style="font-size:32px;margin-bottom:12px;">🔍</div>
+        <div>รัน <code style="color:var(--teal)">docker node ls</code> เพื่อเริ่มตรวจสอบ</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 //  TAB SWITCHING
 // ══════════════════════════════════════════
 function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['swarm','raft'][i]===name));
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['swarm','raft','checklist'][i]===name));
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   if(name==='raft') { rBuildSVG(); rUpdateStats(); }
   if(name==='swarm') { document.getElementById('cmd-input').focus(); }
+  if(name==='checklist') { document.getElementById('hc-input').focus(); }
 }
 
 // ══════════════════════════════════════════
@@ -1051,6 +1235,402 @@ renderViz();
 rBuildSVG();
 rUpdateStats();
 rLog('พร้อม — กด "เริ่มเลือก leader" หรือซิงค์จาก Swarm Terminal','ok');
+
+// ══════════════════════════════════════════
+//  HEALTH CHECK TERMINAL
+// ══════════════════════════════════════════
+let hcHistory = [], hcHistIdx = -1;
+
+// simulated state
+const hcState = {
+  nodes: [
+    { id:'xk3m9p2qr4ab', hostname:'manager-node1', ip:'192.168.1.100', role:'manager', status:'Ready', availability:'Active', leader:true,  managerStatus:'Leader'     },
+    { id:'jf7t1nw8c2de', hostname:'manager-node2', ip:'192.168.1.101', role:'manager', status:'Ready', availability:'Active', leader:false, managerStatus:'Reachable'   },
+    { id:'bz4r6ks0m9fg', hostname:'worker-node1',  ip:'192.168.1.102', role:'worker',  status:'Ready', availability:'Active', leader:false, managerStatus:''            },
+    { id:'qn2w5yx7h1hi', hostname:'worker-node2',  ip:'192.168.1.103', role:'worker',  status:'Ready', availability:'Active', leader:false, managerStatus:''            },
+    { id:'lc8v3ej4d6jk', hostname:'worker-node3',  ip:'192.168.1.104', role:'worker',  status:'Down',  availability:'Drain',  leader:false, managerStatus:''            },
+  ],
+  services: [
+    { id:'a1b2c3d4e5f6', name:'consent-v2',      replicas:3, running:3, image:'registry.internal/consent:v2.1.4',    ports:'8080:8080' },
+    { id:'g7h8i9j0k1l2', name:'pdpa-cookie-api', replicas:2, running:1, image:'registry.internal/pdpa-cookie:v1.3.2',ports:'8081:8081' },
+    { id:'m3n4o5p6q7r8', name:'nginx-proxy',     replicas:2, running:2, image:'nginx:1.25-alpine',                   ports:'80:80'     },
+  ],
+  containers: [
+    { name:'consent-v2.1',      cpu:'12.4%', mem:'186MiB / 2GiB', memPct:'9.1%',  net:'1.2MB/880kB', block:'0B/0B'     },
+    { name:'consent-v2.2',      cpu:'11.8%', mem:'192MiB / 2GiB', memPct:'9.4%',  net:'1.1MB/900kB', block:'0B/0B'     },
+    { name:'consent-v2.3',      cpu:'10.2%', mem:'178MiB / 2GiB', memPct:'8.7%',  net:'980kB/760kB', block:'0B/0B'     },
+    { name:'pdpa-cookie-api.1', cpu:'4.7%',  mem:'88MiB / 1GiB',  memPct:'8.6%',  net:'320kB/180kB', block:'0B/0B'     },
+    { name:'nginx-proxy.1',     cpu:'0.3%',  mem:'22MiB / 512MiB',memPct:'4.3%',  net:'8.4MB/6.2MB', block:'0B/0B'     },
+    { name:'nginx-proxy.2',     cpu:'0.2%',  mem:'20MiB / 512MiB',memPct:'3.9%',  net:'7.9MB/5.8MB', block:'0B/0B'     },
+  ]
+};
+
+function hcPrint(text, cls='out') {
+  const out = document.getElementById('hc-out');
+  const el = document.createElement('div');
+  el.className = cls;
+  el.textContent = text;
+  out.appendChild(el);
+  out.scrollTop = out.scrollHeight;
+}
+function hcPrintCmd(cmd) {
+  const out = document.getElementById('hc-out');
+  const el = document.createElement('div');
+  el.className = 't-line';
+  el.innerHTML = `<span class="t-prompt">admin@manager-node1:~$&nbsp;</span><span class="t-cmd">${esc(cmd)}</span>`;
+  out.appendChild(el);
+  out.scrollTop = out.scrollHeight;
+}
+function hcBlank() { hcPrint(''); }
+
+function hcRun(cmd) {
+  hcPrintCmd(cmd);
+  hcHistory.unshift(cmd);
+  hcHistIdx = -1;
+  hcParseCmd(cmd.trim());
+  document.getElementById('hc-input').focus();
+}
+
+function hcParseCmd(cmd) {
+  // Step 01: docker node ls
+  if(cmd === 'docker node ls') { hcNodeLs(); return; }
+
+  // Step 02: docker service ls (with optional grep)
+  if(cmd === 'docker service ls' || cmd.match(/docker service ls.*grep/)) { hcServiceLs(cmd); return; }
+
+  // Step 03: docker service ps <name>
+  const psM = cmd.match(/^docker service ps (\S+)/);
+  if(psM) { hcServicePs(psM[1]); return; }
+
+  // Step 04: docker stats
+  if(cmd === 'docker stats --no-stream' || cmd === 'docker stats') { hcDockerStats(); return; }
+  if(cmd === 'docker system df') { hcSystemDf(); return; }
+  if(cmd === 'df -h /' || cmd === 'df -h') { hcDfH(); return; }
+
+  // Step 05: uptime / systemctl
+  if(cmd === 'uptime') { hcUptime(); return; }
+  if(cmd === 'systemctl is-system-running') { hcIsSystemRunning(); return; }
+  if(cmd === 'systemctl --failed') { hcSystemctlFailed(); return; }
+  if(cmd === 'systemctl status docker' || cmd === 'service docker status') { hcDockerStatus(); return; }
+
+  // Extras
+  if(cmd === 'clear') { document.getElementById('hc-out').innerHTML = ''; hcInitViz(); return; }
+  if(cmd === 'help') { hcHelp(); return; }
+  if(cmd.startsWith('ssh ')) { hcPrint(''); hcPrint('ssh: connected to remote host (simulated)', 'out warn'); hcPrint('ใช้คำสั่งด้านล่างเพื่อตรวจสอบบน node นั้น', 'out dim'); hcPrint(''); return; }
+
+  hcPrint('');
+  hcPrint('command not found: ' + cmd, 'out err');
+  hcPrint('พิมพ์ "help" เพื่อดูคำสั่งที่รองรับ', 'out dim');
+  hcPrint('');
+}
+
+function hcNodeLs() {
+  hcPrint('');
+  hcPrint('ID                          HOSTNAME         STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION', 'out head');
+  hcPrint('─'.repeat(95), 'out dim');
+  hcState.nodes.forEach(n => {
+    const star = n.hostname === 'manager-node1' ? ' *' : '  ';
+    const line = [
+      (n.id + star).padEnd(30),
+      n.hostname.padEnd(17),
+      n.status.padEnd(10),
+      n.availability.padEnd(15),
+      n.managerStatus.padEnd(17),
+      '24.0.7'
+    ].join('  ');
+    hcPrint(line, n.status === 'Ready' ? 'out ok' : 'out err');
+  });
+  hcPrint('');
+  // warning for down node
+  hcPrint('⚠  worker-node3 is Down — ตรวจสอบด้วย: ssh admin@192.168.1.104 && systemctl status docker', 'out warn');
+  hcPrint('');
+  hcUpdateViz('nodes');
+}
+
+function hcServiceLs(cmd) {
+  hcPrint('');
+  const isGrep = cmd.includes('grep');
+  hcPrint('ID               NAME              MODE         REPLICAS   IMAGE                                  PORTS', 'out head');
+  hcPrint('─'.repeat(100), 'out dim');
+  hcState.services.forEach(s => {
+    if(isGrep && !cmd.includes(s.name.split('-')[0]) && !cmd.includes(s.name)) return;
+    const ok = s.running === s.replicas;
+    const repStr = s.running + '/' + s.replicas;
+    const line = [
+      s.id.padEnd(17),
+      s.name.padEnd(18),
+      'replicated'.padEnd(13),
+      repStr.padEnd(11),
+      s.image.padEnd(39),
+      '*:' + s.ports
+    ].join('  ');
+    hcPrint(line, ok ? 'out ok' : 'out err');
+    if(!ok) hcPrint('   ↳ REPLICAS ไม่ครบ! รัน: docker service ps ' + s.name + ' เพื่อดูรายละเอียด', 'out warn');
+  });
+  hcPrint('');
+  hcUpdateViz('services');
+}
+
+function hcServicePs(name) {
+  const svc = hcState.services.find(s => s.name === name);
+  if(!svc) { hcPrint(''); hcPrint('Error: service "' + name + '" not found', 'out err'); hcPrint(''); return; }
+  hcPrint('');
+  hcPrint('ID             NAME                    IMAGE                     NODE             DESIRED STATE   CURRENT STATE         ERROR', 'out head');
+  hcPrint('─'.repeat(130), 'out dim');
+  const nodes = hcState.nodes.filter(n => n.status === 'Ready');
+  for(let i = 0; i < svc.replicas; i++) {
+    const node = nodes[i % nodes.length];
+    const taskId = 'tk' + Math.random().toString(36).slice(2,14);
+    const isRunning = i < svc.running;
+    const state = isRunning ? 'Running' : 'Failed';
+    const currentState = isRunning ? 'Running 3 hours ago' : 'Failed 12 minutes ago';
+    const error = isRunning ? '' : '"OOMKilled" — container ถูก kill เพราะ RAM เกิน limit';
+    const line = [
+      taskId.slice(0,13).padEnd(15),
+      (name + '.' + (i+1)).padEnd(24),
+      svc.image.split('/').pop().padEnd(26),
+      (node?.hostname || '?').padEnd(17),
+      state.padEnd(16),
+      currentState.padEnd(22),
+      error
+    ].join('  ');
+    hcPrint(line, isRunning ? 'out ok' : 'out err');
+  }
+  hcPrint('');
+  if(svc.running < svc.replicas) {
+    hcPrint('🔴 พบ task ที่ล้มเหลว: OOMKilled — container ใช้ RAM เกิน limit ที่ตั้งไว้', 'out err');
+    hcPrint('   แนวทางแก้ไข: docker service update --limit-memory 512m ' + name, 'out warn');
+  }
+  hcPrint('');
+  hcUpdateViz('task-' + name);
+}
+
+function hcDockerStats() {
+  hcPrint('');
+  hcPrint('CONTAINER           CPU %   MEM USAGE / LIMIT     MEM %    NET I/O          BLOCK I/O', 'out head');
+  hcPrint('─'.repeat(90), 'out dim');
+  hcState.containers.forEach(c => {
+    const cpuNum = parseFloat(c.cpu);
+    const memNum = parseFloat(c.memPct);
+    const line = [
+      c.name.padEnd(20),
+      c.cpu.padEnd(8),
+      c.mem.padEnd(22),
+      c.memPct.padEnd(9),
+      c.net.padEnd(17),
+      c.block
+    ].join('  ');
+    const cls = cpuNum > 80 || memNum > 80 ? 'out err' : (cpuNum > 50 || memNum > 50 ? 'out warn' : 'out ok');
+    hcPrint(line, cls);
+  });
+  hcPrint('');
+  hcPrint('✅ CPU และ RAM อยู่ในระดับปกติ — ไม่มี container ใดใช้เกิน 80%', 'out ok');
+  hcPrint('');
+  hcUpdateViz('resources');
+}
+
+function hcSystemDf() {
+  hcPrint('');
+  hcPrint('TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE', 'out head');
+  hcPrint('─'.repeat(55), 'out dim');
+  hcPrint('Images          18        6         4.82GB    2.31GB (47%)', 'out');
+  hcPrint('Containers      9         6         142MB     0B (0%)', 'out');
+  hcPrint('Local Volumes   3         2         890MB     210MB (23%)', 'out');
+  hcPrint('Build Cache     0         0         0B        0B', 'out dim');
+  hcPrint('');
+  hcPrint('💡 มี unused images 2.31GB — รัน "docker image prune -a" เพื่อเพิ่ม disk space', 'out warn');
+  hcPrint('');
+}
+
+function hcDfH() {
+  hcPrint('');
+  hcPrint('Filesystem      Size  Used Avail Use% Mounted on', 'out head');
+  hcPrint('─'.repeat(50), 'out dim');
+  hcPrint('/dev/sda1        99G   61G   38G  62% /', 'out ok');
+  hcPrint('tmpfs           7.8G  1.2G  6.6G  16% /dev/shm', 'out ok');
+  hcPrint('/dev/sdb1       200G  162G   38G  82% /var/lib/docker', 'out warn');
+  hcPrint('');
+  hcPrint('⚠  /var/lib/docker ใช้ไปแล้ว 82% — เริ่มใกล้เต็ม', 'out warn');
+  hcPrint('   แนะนำ: docker system prune -f เพื่อลบ unused resources', 'out warn');
+  hcPrint('');
+  hcUpdateViz('disk');
+}
+
+function hcUptime() {
+  const now = new Date();
+  const timeStr = now.toTimeString().slice(0,8);
+  hcPrint('');
+  hcPrint(' ' + timeStr + ' up 12 days,  4:37,  1 user,  load average: 0.42, 0.38, 0.35', 'out ok');
+  hcPrint('');
+  hcPrint('✅ load average ปกติ — server มี 4 CPU cores, load < 4.0 ถือว่าดี', 'out ok');
+  hcPrint('');
+  hcUpdateViz('uptime');
+}
+
+function hcIsSystemRunning() {
+  hcPrint('');
+  hcPrint('degraded', 'out warn');
+  hcPrint('');
+  hcPrint('⚠  สถานะ "degraded" หมายความว่ามี systemd unit บางตัวล้มเหลว', 'out warn');
+  hcPrint('   รัน "systemctl --failed" เพื่อดูว่า unit ไหนมีปัญหา', 'out warn');
+  hcPrint('');
+  hcUpdateViz('systemd-degraded');
+}
+
+function hcSystemctlFailed() {
+  hcPrint('');
+  hcPrint('  UNIT                    LOAD   ACTIVE SUB    DESCRIPTION', 'out head');
+  hcPrint('─'.repeat(65), 'out dim');
+  hcPrint('● node-exporter.service   loaded failed failed  Prometheus Node Exporter', 'out err');
+  hcPrint('');
+  hcPrint('LOAD   = Reflects whether the unit definition was properly loaded.', 'out dim');
+  hcPrint('ACTIVE = The high-level unit activation state.', 'out dim');
+  hcPrint('SUB    = The low-level unit activation state.', 'out dim');
+  hcPrint('');
+  hcPrint('1 loaded units listed.', 'out');
+  hcPrint('');
+  hcPrint('🔴 node-exporter.service ล้มเหลว — Prometheus monitoring ไม่ทำงาน', 'out err');
+  hcPrint('   แก้ไขด้วย: sudo systemctl restart node-exporter', 'out warn');
+  hcPrint('   ดู log: sudo journalctl -u node-exporter -n 50', 'out warn');
+  hcPrint('   ⚙️ Docker และ services ทำงานได้ปกติ — แค่ monitoring พัง', 'out ok');
+  hcPrint('');
+  hcUpdateViz('failed-unit');
+}
+
+function hcDockerStatus() {
+  hcPrint('');
+  hcPrint('● docker.service - Docker Application Container Engine', 'out ok');
+  hcPrint('     Loaded: loaded (/lib/systemd/system/docker.service; enabled)', 'out');
+  hcPrint('     Active: active (running) since Mon 2026-06-15 06:03:12 UTC; 12 days ago', 'out ok');
+  hcPrint('       Docs: https://docs.docker.com', 'out dim');
+  hcPrint('   Main PID: 1423 (dockerd)', 'out');
+  hcPrint('      Tasks: 142 (limit: 4915)', 'out');
+  hcPrint('     Memory: 312.4M', 'out');
+  hcPrint('        CPU: 48min 21.303s', 'out');
+  hcPrint('     CGroup: /system.slice/docker.service', 'out');
+  hcPrint('             └─1423 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock', 'out dim');
+  hcPrint('');
+  hcPrint('Jun 15 10:00:01 manager-node1 dockerd[1423]: time="2026-06-15" level=info msg="No non-localhost DNS nameservers"', 'out dim');
+  hcPrint('Jun 15 10:12:44 manager-node1 dockerd[1423]: time="2026-06-15" level=info msg="Container started" container=a3f9...', 'out dim');
+  hcPrint('');
+  hcPrint('✅ Docker daemon ทำงานปกติ — active (running) 12 วัน', 'out ok');
+  hcPrint('');
+  hcUpdateViz('docker-ok');
+}
+
+function hcHelp() {
+  hcPrint('');
+  hcPrint('Health Check Terminal — คำสั่งที่รองรับ', 'out head');
+  hcPrint('─────────────────────────────────────────────────────────', 'out dim');
+  hcPrint('  [01] docker node ls                    ตรวจ nodes ทั้งหมด', 'out ok');
+  hcPrint('  [02] docker service ls                 ดู services และ replicas', 'out ok');
+  hcPrint('  [03] docker service ps <name>          ดู tasks ของ service', 'out ok');
+  hcPrint('       docker service ps consent-v2', 'out dim');
+  hcPrint('       docker service ps pdpa-cookie-api', 'out dim');
+  hcPrint('  [04] docker stats --no-stream          ดู CPU/RAM ทุก container', 'out info');
+  hcPrint('       docker system df                  ดู disk usage ของ Docker', 'out info');
+  hcPrint('       df -h /                           ดู disk ของ host', 'out info');
+  hcPrint('  [05] uptime                            ดู load average', 'out warn');
+  hcPrint('       systemctl is-system-running       ตรวจสถานะ system', 'out warn');
+  hcPrint('       systemctl --failed                ดู units ที่พัง', 'out warn');
+  hcPrint('       systemctl status docker           ตรวจ Docker daemon', 'out warn');
+  hcPrint('');
+}
+
+// ── Health Status Visualizer ──
+function hcUpdateViz(context) {
+  const viz = document.getElementById('hc-viz');
+  let html = '';
+
+  const downNodes = hcState.nodes.filter(n => n.status !== 'Ready');
+  const badSvcs   = hcState.services.filter(s => s.running < s.replicas);
+
+  const overall = downNodes.length === 0 && badSvcs.length === 0;
+
+  // Overall badge
+  html += `<div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:11px;font-family:Inter,sans-serif;font-weight:500;margin-bottom:16px;${overall?'background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,0.25)':'background:var(--amber-dim);color:var(--amber);border:1px solid rgba(227,179,65,0.25)'}"><div style="width:6px;height:6px;border-radius:50%;background:currentColor;${overall?'animation:blink 2s ease-in-out infinite':''}"></div>${overall?'System Healthy':'⚠ Issues Detected'}</div>`;
+
+  // Nodes
+  html += `<div class="section-label">Nodes (${hcState.nodes.length})</div><div class="nodes-grid">`;
+  hcState.nodes.forEach(n => {
+    const ok = n.status === 'Ready';
+    const cls = ok ? (n.role === 'manager' ? 'manager' : 'worker') : 'down';
+    const roleLabel = !ok ? 'Down' : (n.managerStatus || 'Worker');
+    const roleCls = !ok ? 'role-down' : (n.managerStatus === 'Leader' ? 'role-manager leader' : n.managerStatus === 'Reachable' ? 'role-manager' : 'role-worker');
+    html += `<div class="node-card ${cls}"><div class="node-top"><span>${n.role==='manager'?'⚙️':'🖥️'}</span><span class="node-name">${n.hostname}</span><span class="node-role-badge ${roleCls}">${roleLabel}</span></div><div class="node-meta"><span>🌐 ${n.ip}</span><span>${n.availability}</span></div></div>`;
+  });
+  html += `</div>`;
+
+  // Services
+  html += `<div class="section-label" style="margin-top:4px">Services</div>`;
+  hcState.services.forEach(s => {
+    const ok = s.running === s.replicas;
+    const dots = Array.from({length:s.replicas},(_,i)=>`<div class="rdot ${i<s.running?'running':'pending'}" title="replica ${i+1}"></div>`).join('');
+    html += `<div class="service-card" style="${!ok?'border-color:rgba(248,81,73,0.3)':''}">
+      <div class="svc-top"><span>📦</span><span class="svc-name">${s.name}</span><span class="svc-replicas" style="color:${ok?'var(--teal)':'var(--red)'}">${s.running}/${s.replicas} ${ok?'✓':'✗'}</span></div>
+      <div style="font-family:Inter,sans-serif;font-size:11px;color:var(--text-muted);margin-bottom:8px;">${s.image.split('/').pop()}</div>
+      <div class="replica-dots">${dots}</div>
+      ${!ok?`<div style="font-family:Inter,sans-serif;font-size:11px;color:var(--red);margin-top:6px;">⚠ replica ขาด — รัน: docker service ps ${s.name}</div>`:''}
+    </div>`;
+  });
+
+  // Context-specific tip
+  const tips = {
+    'nodes': '💡 เห็น worker-node3 Down → SSH เข้าแล้วรัน systemctl status docker',
+    'services': '💡 pdpa-cookie-api replica ขาด → รัน docker service ps pdpa-cookie-api',
+    'task-pdpa-cookie-api': '🔴 OOMKilled — เพิ่ม memory limit: docker service update --limit-memory 512m pdpa-cookie-api',
+    'resources': '✅ CPU/RAM ปกติ → ลองรัน docker system df และ df -h / ต่อ',
+    'disk': '⚠ /var/lib/docker ใกล้เต็ม → รัน docker system prune -f',
+    'uptime': '✅ load ปกติ → รัน systemctl is-system-running ต่อ',
+    'systemd-degraded': '⚠ degraded → รัน systemctl --failed เพื่อดู unit ที่พัง',
+    'failed-unit': '✅ Docker ทำงานปกติ แค่ node-exporter พัง → restart node-exporter',
+    'docker-ok': '✅ ตรวจสอบครบทั้ง 5 ขั้นตอนแล้ว!'
+  };
+  if(tips[context]) {
+    html += `<div style="font-family:Inter,sans-serif;font-size:12px;margin-top:8px;padding:10px 12px;border-radius:8px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);line-height:1.6;">${tips[context]}</div>`;
+  }
+
+  viz.innerHTML = html;
+}
+
+function hcInitViz() {
+  document.getElementById('hc-viz').innerHTML = `<div style="text-align:center;padding:40px 16px;font-family:Inter,sans-serif;color:var(--text-dim);font-size:13px;"><div style="font-size:32px;margin-bottom:12px;">🔍</div><div>รัน <code style="color:var(--teal)">docker node ls</code> เพื่อเริ่มตรวจสอบ</div></div>`;
+}
+
+// Input handler for health check terminal
+document.getElementById('hc-input').addEventListener('keydown', e => {
+  if(e.key === 'Enter') {
+    const v = e.target.value.trim(); if(!v) return;
+    e.target.value = ''; hcRun(v);
+  }
+  if(e.key === 'ArrowUp') { e.preventDefault(); if(hcHistIdx < hcHistory.length-1) { hcHistIdx++; e.target.value = hcHistory[hcHistIdx]||''; } }
+  if(e.key === 'ArrowDown') { e.preventDefault(); if(hcHistIdx > 0) { hcHistIdx--; e.target.value = hcHistory[hcHistIdx]||''; } else { hcHistIdx=-1; e.target.value=''; } }
+  if(e.key === 'Tab') {
+    e.preventDefault();
+    const v = e.target.value;
+    const opts = ['docker node ls','docker service ls','docker service ps consent-v2','docker service ps pdpa-cookie-api','docker stats --no-stream','docker system df','df -h /','uptime','systemctl is-system-running','systemctl --failed','systemctl status docker','help','clear'];
+    const m = opts.find(c => c.startsWith(v) && c !== v);
+    if(m) e.target.value = m;
+  }
+});
+
+// Welcome message for health check tab
+function hcWelcome() {
+  hcPrint('Health Check Terminal — manager-node1', 'out ok');
+  hcPrint('─────────────────────────────────────────────────────────', 'out dim');
+  hcPrint('จำลอง production server สำหรับ 5 ขั้นตอนการตรวจสอบ', 'out');
+  hcPrint('');
+  hcPrint('  Step 01  docker node ls', 'out info');
+  hcPrint('  Step 02  docker service ls', 'out info');
+  hcPrint('  Step 03  docker service ps <name>', 'out info');
+  hcPrint('  Step 04  docker stats --no-stream / docker system df / df -h /', 'out info');
+  hcPrint('  Step 05  uptime / systemctl is-system-running / systemctl --failed', 'out info');
+  hcPrint('');
+  hcPrint('Tab = autocomplete  ↑↓ = ประวัติคำสั่ง  หรือกดปุ่ม Step ด้านล่าง', 'out dim');
+  hcPrint('');
+}
+
+hcWelcome();
 </script>
 </body>
 </html>
