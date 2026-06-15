@@ -3,224 +3,396 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Raft Leader Election — Docker Swarm</title>
+<title>Docker Swarm Complete Simulator</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --surface2: #22263a;
-    --border: rgba(255,255,255,0.08);
-    --text: #e8eaf0;
-    --text-muted: #7a7f9a;
-    --teal: #1ad9a0;
-    --teal-dim: rgba(26,217,160,0.12);
-    --amber: #f5a623;
-    --amber-dim: rgba(245,166,35,0.12);
-    --purple: #8b7cf8;
-    --purple-dim: rgba(139,124,248,0.14);
-    --red: #ff5f6d;
-    --red-dim: rgba(255,95,109,0.1);
-    --gray: #4a4f6a;
-    --gray-dim: rgba(74,79,106,0.15);
-  }
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #e6edf3;
+  --text-muted: #7d8590;
+  --text-dim: #484f58;
+  --blue: #2f81f7;
+  --blue-dim: rgba(47,129,247,0.12);
+  --teal: #39d353;
+  --teal-dim: rgba(57,211,83,0.1);
+  --amber: #e3b341;
+  --amber-dim: rgba(227,179,65,0.1);
+  --red: #f85149;
+  --red-dim: rgba(248,81,73,0.1);
+  --purple: #a371f7;
+  --purple-dim: rgba(163,113,247,0.12);
+  --docker-blue: #1d63ed;
+}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 32px 16px;
-  }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'SF Mono','Fira Code','Cascadia Code','Consolas',monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
-  h1 {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.3px;
-    margin-bottom: 4px;
-    color: var(--text);
-  }
+/* ── Header ── */
+.header {
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.docker-logo {
+  width: 28px; height: 28px;
+  background: var(--docker-blue);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+}
+.header-title { font-size: 14px; font-weight: 600; font-family: Inter,system-ui,sans-serif; }
+.header-sub { font-size: 11px; color: var(--text-muted); font-family: Inter,system-ui,sans-serif; margin-left: auto; }
 
-  .subtitle {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-bottom: 28px;
-  }
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 20px 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tab {
+  font-family: Inter,system-ui,sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 18px;
+  border-radius: 6px 6px 0 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  top: 1px;
+}
+.tab:hover { color: var(--text); background: var(--surface2); }
+.tab.active {
+  color: var(--text);
+  background: var(--bg);
+  border-color: var(--border);
+  border-bottom-color: var(--bg);
+}
 
-  .container {
-    width: 100%;
-    max-width: 720px;
-  }
+/* ── Tab pages ── */
+.page { display: none; flex: 1; overflow: hidden; }
+.page.active { display: flex; flex-direction: column; }
 
-  /* Stat row */
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-bottom: 20px;
-  }
+/* ═══════════════════════════════════════
+   PAGE 1 — Swarm Terminal Simulator
+═══════════════════════════════════════ */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  flex: 1;
+  overflow: hidden;
+}
+.terminal-pane {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+.pane-header {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: Inter,system-ui,sans-serif;
+  flex-shrink: 0;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.terminal-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  line-height: 1.7;
+  font-size: 13px;
+}
+.terminal-output::-webkit-scrollbar { width: 4px; }
+.terminal-output::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.t-line { display: flex; }
+.t-prompt { color: var(--teal); white-space: nowrap; }
+.t-cmd { color: var(--text); }
+.out { color: var(--text-muted); white-space: pre; font-size: 12px; }
+.out.ok { color: var(--teal); }
+.out.warn { color: var(--amber); }
+.out.err { color: var(--red); }
+.out.info { color: var(--blue); }
+.out.head { color: var(--text); font-weight: 600; }
+.out.dim { color: var(--text-dim); }
+.input-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  gap: 8px;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.input-prompt { color: var(--teal); font-size: 13px; white-space: nowrap; }
+#cmd-input {
+  flex: 1;
+  background: transparent;
+  border: none; outline: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  caret-color: var(--teal);
+}
+.quick-cmds {
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.qbtn {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.qbtn:hover { background: var(--surface); color: var(--text); }
+.qbtn.cat-init { border-color: rgba(47,129,247,0.3); color: var(--blue); }
+.qbtn.cat-node { border-color: rgba(57,211,83,0.3); color: var(--teal); }
+.qbtn.cat-service { border-color: rgba(163,113,247,0.3); color: var(--purple); }
+.qbtn.cat-danger { border-color: rgba(248,81,73,0.3); color: var(--red); }
 
-  .stat {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 16px;
-  }
+/* Viz pane */
+.viz-pane { display: flex; flex-direction: column; overflow: hidden; }
+.viz-body { flex: 1; overflow-y: auto; padding: 16px; }
+.viz-body::-webkit-scrollbar { width: 4px; }
+.viz-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.swarm-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 11px; font-family: Inter,system-ui,sans-serif; font-weight: 500;
+  margin-bottom: 16px;
+}
+.swarm-badge.active { background: var(--teal-dim); color: var(--teal); border: 1px solid rgba(57,211,83,0.25); }
+.swarm-badge.inactive { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+.swarm-badge .led { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.swarm-badge.active .led { animation: blink 2s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.nodes-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.node-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+  transition: border-color 0.2s; font-family: Inter,system-ui,sans-serif;
+  animation: fadeIn 0.25s ease;
+}
+.node-card.manager { border-left: 3px solid var(--purple); }
+.node-card.worker  { border-left: 3px solid var(--teal); }
+.node-card.down    { border-left: 3px solid var(--red); opacity: 0.5; }
+.node-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.node-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.node-role-badge { font-size: 10px; padding: 1px 7px; border-radius: 10px; font-weight: 500; margin-left: auto; }
+.role-manager { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(163,113,247,0.25); }
+.role-manager.leader { background: rgba(163,113,247,0.2); border-color: var(--purple); }
+.role-worker { background: var(--teal-dim); color: var(--teal); border: 1px solid rgba(57,211,83,0.2); }
+.role-down   { background: var(--red-dim); color: var(--red); border: 1px solid rgba(248,81,73,0.2); }
+.node-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; }
+.service-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+  font-family: Inter,system-ui,sans-serif; animation: fadeIn 0.25s ease;
+}
+.svc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.svc-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.svc-replicas { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+.replica-dots { display: flex; gap: 4px; flex-wrap: wrap; }
+.rdot {
+  width: 10px; height: 10px; border-radius: 2px;
+  background: var(--teal-dim); border: 1px solid rgba(57,211,83,0.3);
+  transition: all 0.3s;
+}
+.rdot.running { background: rgba(57,211,83,0.25); border-color: var(--teal); }
+.rdot.pending { background: var(--amber-dim); border-color: var(--amber); animation: pulse-dot 1s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+.stat-mini { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; font-family: Inter,system-ui,sans-serif; }
+.stat-mini-val { font-size: 20px; font-weight: 700; color: var(--text); }
+.stat-mini-lbl { font-size: 10px; color: var(--text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+.section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); font-family: Inter,system-ui,sans-serif; margin-bottom: 8px; font-weight: 600; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
 
-  .stat-label {
-    font-size: 11px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    margin-bottom: 4px;
-  }
+/* ═══════════════════════════════════════
+   PAGE 2 — Raft Election
+═══════════════════════════════════════ */
+.raft-page {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 16px;
+  font-family: Inter,system-ui,sans-serif;
+}
+.raft-container { width: 100%; max-width: 720px; }
+.raft-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+.raft-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+.r-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 20px; }
+.r-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+.r-stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+.r-stat-value { font-size: 18px; font-weight: 600; color: var(--text); transition: color 0.3s; }
+.svg-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+.r-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.r-btn {
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  padding: 8px 16px; border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text);
+  cursor: pointer; transition: background 0.15s, transform 0.1s;
+}
+.r-btn:hover { background: rgba(255,255,255,0.07); }
+.r-btn:active { transform: scale(0.97); }
+.r-btn.primary { background: var(--purple-dim); border-color: var(--purple); color: var(--purple); }
+.r-btn.primary:hover { background: rgba(163,113,247,0.22); }
+.r-btn.danger  { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+.r-btn.danger:hover { background: rgba(248,81,73,0.18); }
+.r-log {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; font-size: 12px;
+  font-family: 'SF Mono','Fira Code','Cascadia Code',monospace;
+  color: var(--text-muted); line-height: 1.9;
+  min-height: 80px; max-height: 140px; overflow-y: auto;
+}
+.r-log .entry { display: flex; gap: 8px; }
+.r-log .ts { color: var(--text-dim); flex-shrink: 0; }
+.r-log .msg { color: var(--text); }
+.r-log .msg.ok   { color: var(--teal); }
+.r-log .msg.warn { color: var(--amber); }
+.r-log .msg.err  { color: var(--red); }
+.r-legend { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.r-legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-muted); }
+.r-legend-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid; flex-shrink: 0; }
+.r-hint { font-size: 11px; color: var(--text-muted); margin-top: 10px; text-align: center; }
+@keyframes candidate-spin { from{stroke-dashoffset:0} to{stroke-dashoffset:-60} }
 
-  .stat-value {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text);
-    transition: color 0.3s;
-  }
-
-  /* SVG canvas */
-  .svg-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    margin-bottom: 16px;
-  }
-
-  /* Buttons */
-  .controls {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-  }
-
-  button {
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--surface2);
-    color: var(--text);
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, transform 0.1s;
-    letter-spacing: 0.1px;
-  }
-
-  button:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.15); }
-  button:active { transform: scale(0.97); }
-
-  button.primary {
-    background: var(--purple-dim);
-    border-color: var(--purple);
-    color: var(--purple);
-  }
-  button.primary:hover { background: rgba(139,124,248,0.22); }
-
-  button.danger {
-    background: var(--red-dim);
-    border-color: var(--red);
-    color: var(--red);
-  }
-  button.danger:hover { background: rgba(255,95,109,0.18); }
-
-  /* Log */
-  .log {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-    font-size: 12px;
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-    color: var(--text-muted);
-    line-height: 1.9;
-    min-height: 80px;
-    max-height: 140px;
-    overflow-y: auto;
-  }
-
-  .log .entry { display: flex; gap: 8px; }
-  .log .ts { color: var(--gray); flex-shrink: 0; }
-  .log .msg { color: var(--text); }
-  .log .msg.ok { color: var(--teal); }
-  .log .msg.warn { color: var(--amber); }
-  .log .msg.err { color: var(--red); }
-
-  /* Legend */
-  .legend {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--border);
-  }
-
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-
-  .legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    border: 1.5px solid;
-    flex-shrink: 0;
-  }
-
-  /* Hint */
-  .hint {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 10px;
-    text-align: center;
-  }
-
-  /* Node animations */
-  @keyframes leader-pulse {
-    0%, 100% { r: 30; }
-    50% { r: 34; }
-  }
-
-  @keyframes candidate-spin {
-    from { stroke-dashoffset: 0; }
-    to { stroke-dashoffset: -60; }
-  }
+/* ── Bridge button ── */
+.bridge-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: Inter,system-ui,sans-serif; font-size: 12px;
+  padding: 6px 14px; border-radius: 6px;
+  border: 1px solid rgba(163,113,247,0.3);
+  background: var(--purple-dim); color: var(--purple);
+  cursor: pointer; transition: all 0.15s; margin-bottom: 12px;
+}
+.bridge-btn:hover { background: rgba(163,113,247,0.22); }
 </style>
 </head>
 <body>
 
-<div class="container">
-  <h1>Raft Leader Election</h1>
-  <p class="subtitle">จำลองการเลือก leader ใน Docker Swarm — กดปุ่มหรือคลิก node เพื่อ kill/รีสตาร์ท</p>
+<!-- Header -->
+<div class="header">
+  <div class="docker-logo">🐳</div>
+  <div>
+    <div class="header-title">Docker Swarm Complete Simulator</div>
+  </div>
+  <div class="header-sub">Terminal + Raft Election ในไฟล์เดียว</div>
+</div>
 
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-label">Term (รอบ)</div>
-      <div class="stat-value" id="s-term">1</div>
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('swarm')">🖥️ Swarm Terminal</button>
+  <button class="tab" onclick="switchTab('raft')">⚡ Raft Election</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 1: Swarm Terminal
+══════════════════════════════════════ -->
+<div class="page active" id="page-swarm">
+<div class="layout">
+  <!-- Terminal -->
+  <div class="terminal-pane" onclick="document.getElementById('cmd-input').focus()">
+    <div class="pane-header">
+      <div class="dot" style="background:#ff5f57"></div>
+      <div class="dot" style="background:#febc2e"></div>
+      <div class="dot" style="background:#28c840"></div>
+      <span style="margin-left:4px">Terminal — bash</span>
     </div>
-    <div class="stat">
-      <div class="stat-label">Leader</div>
-      <div class="stat-value" id="s-leader" style="color:var(--purple)">—</div>
+    <div class="terminal-output" id="term-out"></div>
+    <div class="input-row">
+      <span class="input-prompt" id="prompt-label">user@host:~$</span>
+      <input id="cmd-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="พิมพ์คำสั่ง docker หรือกด Tab..."/>
     </div>
-    <div class="stat">
-      <div class="stat-label">สถานะ</div>
-      <div class="stat-value" id="s-phase" style="font-size:14px">พร้อม</div>
+    <div class="quick-cmds">
+      <span style="font-size:11px;color:var(--text-dim);align-self:center;font-family:Inter,sans-serif">Quick:</span>
+      <button class="qbtn cat-init" onclick="runCmd('docker swarm init')">swarm init</button>
+      <button class="qbtn cat-node" onclick="runCmd('docker node ls')">node ls</button>
+      <button class="qbtn cat-node" onclick="runCmd('docker swarm join-token worker')">join-token worker</button>
+      <button class="qbtn cat-node" onclick="runCmd('docker swarm join-token manager')">join-token manager</button>
+      <button class="qbtn cat-node" onclick="addWorker()">+ worker join</button>
+      <button class="qbtn cat-node" onclick="addManager()">+ manager join</button>
+      <button class="qbtn cat-service" onclick="runCmd('docker service create --name web --replicas 3 nginx')">service create</button>
+      <button class="qbtn cat-service" onclick="runCmd('docker service ls')">service ls</button>
+      <button class="qbtn cat-service" onclick="runCmd('docker service scale web=5')">service scale</button>
+      <button class="qbtn cat-service" onclick="runCmd('docker service ps web')">service ps</button>
+      <button class="qbtn cat-danger" onclick="runCmd('docker node update --availability drain node1')">drain node1</button>
+      <button class="qbtn cat-danger" onclick="runCmd('docker node demote node1')">demote node1</button>
+      <button class="qbtn cat-danger" onclick="runCmd('docker swarm leave --force')">swarm leave</button>
+      <button class="qbtn" onclick="runCmd('help')">help</button>
     </div>
+  </div>
+
+  <!-- Viz -->
+  <div class="viz-pane">
+    <div class="pane-header"><span>Swarm Visualizer</span></div>
+    <div class="viz-body" id="viz-body">
+      <div style="text-align:center;padding:40px 16px;font-family:Inter,sans-serif;color:var(--text-dim);font-size:13px;">
+        <div style="font-size:32px;margin-bottom:12px;">🐳</div>
+        <div>รัน <code style="color:var(--blue)">docker swarm init</code> เพื่อเริ่มต้น</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 2: Raft Election
+══════════════════════════════════════ -->
+<div class="page" id="page-raft">
+<div class="raft-page">
+<div class="raft-container">
+
+  <button class="bridge-btn" onclick="syncRaftFromSwarm()">⟳ ซิงค์ nodes จาก Swarm Terminal</button>
+
+  <h2 class="raft-title">Raft Leader Election</h2>
+  <p class="raft-sub">จำลองการเลือก leader — กดปุ่มหรือคลิก node เพื่อ kill/รีสตาร์ท</p>
+
+  <div class="r-stats">
+    <div class="r-stat"><div class="r-stat-label">Term (รอบ)</div><div class="r-stat-value" id="r-term">1</div></div>
+    <div class="r-stat"><div class="r-stat-label">Leader</div><div class="r-stat-value" id="r-leader" style="color:var(--purple)">—</div></div>
+    <div class="r-stat"><div class="r-stat-label">สถานะ</div><div class="r-stat-value" id="r-phase" style="font-size:14px">พร้อม</div></div>
   </div>
 
   <div class="svg-wrap">
@@ -229,358 +401,656 @@
         <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
           <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </marker>
-        <filter id="glow-purple">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <filter id="glow-teal">
-          <feGaussianBlur stdDeviation="3" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
       </defs>
-
-      <!-- Connection lines -->
-      <g id="conn-lines" stroke="rgba(255,255,255,0.06)" stroke-width="1" fill="none">
-        <line x1="200" y1="180" x2="340" y2="110"/>
-        <line x1="200" y1="180" x2="340" y2="250"/>
-        <line x1="200" y1="180" x2="490" y2="110"/>
-        <line x1="200" y1="180" x2="490" y2="250"/>
-        <line x1="340" y1="110" x2="490" y2="110"/>
-        <line x1="340" y1="250" x2="490" y2="250"/>
-        <line x1="340" y1="110" x2="490" y2="250"/>
-        <line x1="340" y1="250" x2="490" y2="110"/>
-        <line x1="340" y1="110" x2="340" y2="250"/>
-      </g>
-
-      <!-- Heartbeat lines (active when leader exists) -->
-      <g id="hb-lines" opacity="0" stroke-width="0.8" fill="none" stroke-dasharray="4 4">
-        <line id="hb-0" x1="200" y1="180" x2="340" y2="110" stroke="#8b7cf8"/>
-        <line id="hb-1" x1="200" y1="180" x2="340" y2="250" stroke="#8b7cf8"/>
-        <line id="hb-2" x1="200" y1="180" x2="490" y2="110" stroke="#8b7cf8"/>
-        <line id="hb-3" x1="200" y1="180" x2="490" y2="250" stroke="#8b7cf8"/>
-      </g>
-
-      <!-- Vote message particles -->
-      <g id="msg-layer"></g>
-
-      <!-- Nodes -->
-      <g id="nodes-layer">
-        <!-- Node 1 -->
-        <g id="node-0" style="cursor:pointer" onclick="toggleKill(0)">
-          <circle id="nc-0" cx="200" cy="180" r="30" fill="#1a1d27" stroke="#1ad9a0" stroke-width="1.5"/>
-          <circle id="nc-spin-0" cx="200" cy="180" r="36" fill="none" stroke="#8b7cf8" stroke-width="2" stroke-dasharray="18 60" opacity="0" stroke-linecap="round"/>
-          <text x="200" y="175" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#e8eaf0" id="nt-0">Node 1</text>
-          <text x="200" y="193" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1ad9a0" id="nr-0">Follower</text>
-        </g>
-        <!-- Node 2 -->
-        <g id="node-1" style="cursor:pointer" onclick="toggleKill(1)">
-          <circle id="nc-1" cx="340" cy="110" r="30" fill="#1a1d27" stroke="#1ad9a0" stroke-width="1.5"/>
-          <circle id="nc-spin-1" cx="340" cy="110" r="36" fill="none" stroke="#8b7cf8" stroke-width="2" stroke-dasharray="18 60" opacity="0" stroke-linecap="round"/>
-          <text x="340" y="105" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#e8eaf0" id="nt-1">Node 2</text>
-          <text x="340" y="123" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1ad9a0" id="nr-1">Follower</text>
-        </g>
-        <!-- Node 3 -->
-        <g id="node-2" style="cursor:pointer" onclick="toggleKill(2)">
-          <circle id="nc-2" cx="490" cy="110" r="30" fill="#1a1d27" stroke="#1ad9a0" stroke-width="1.5"/>
-          <circle id="nc-spin-2" cx="490" cy="110" r="36" fill="none" stroke="#8b7cf8" stroke-width="2" stroke-dasharray="18 60" opacity="0" stroke-linecap="round"/>
-          <text x="490" y="105" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#e8eaf0" id="nt-2">Node 3</text>
-          <text x="490" y="123" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1ad9a0" id="nr-2">Follower</text>
-        </g>
-        <!-- Node 4 -->
-        <g id="node-3" style="cursor:pointer" onclick="toggleKill(3)">
-          <circle id="nc-3" cx="340" cy="250" r="30" fill="#1a1d27" stroke="#1ad9a0" stroke-width="1.5"/>
-          <circle id="nc-spin-3" cx="340" cy="250" r="36" fill="none" stroke="#8b7cf8" stroke-width="2" stroke-dasharray="18 60" opacity="0" stroke-linecap="round"/>
-          <text x="340" y="245" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#e8eaf0" id="nt-3">Node 4</text>
-          <text x="340" y="263" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1ad9a0" id="nr-3">Follower</text>
-        </g>
-        <!-- Node 5 -->
-        <g id="node-4" style="cursor:pointer" onclick="toggleKill(4)">
-          <circle id="nc-4" cx="490" cy="250" r="30" fill="#1a1d27" stroke="#1ad9a0" stroke-width="1.5"/>
-          <circle id="nc-spin-4" cx="490" cy="250" r="36" fill="none" stroke="#8b7cf8" stroke-width="2" stroke-dasharray="18 60" opacity="0" stroke-linecap="round"/>
-          <text x="490" y="245" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#e8eaf0" id="nt-4">Node 5</text>
-          <text x="490" y="263" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1ad9a0" id="nr-4">Follower</text>
-        </g>
-      </g>
-
-      <!-- Quorum label -->
-      <text x="340" y="330" text-anchor="middle" font-size="11" fill="rgba(255,255,255,0.2)" id="quorum-txt">Quorum = 3 จาก 5 nodes</text>
+      <g id="r-conn-lines" stroke="rgba(255,255,255,0.06)" stroke-width="1" fill="none"></g>
+      <g id="r-hb-lines" opacity="0" stroke-width="0.8" fill="none"></g>
+      <g id="r-msg-layer"></g>
+      <g id="r-nodes-layer"></g>
+      <text x="340" y="340" text-anchor="middle" font-size="11" fill="rgba(255,255,255,0.2)" id="r-quorum-txt" font-family="Inter,sans-serif">Quorum = 3 จาก 5 nodes</text>
     </svg>
-
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:rgba(26,217,160,0.15);border-color:#1ad9a0"></div> Follower</div>
-      <div class="legend-item"><div class="legend-dot" style="background:rgba(245,166,35,0.15);border-color:#f5a623"></div> Candidate</div>
-      <div class="legend-item"><div class="legend-dot" style="background:rgba(139,124,248,0.2);border-color:#8b7cf8"></div> Leader</div>
-      <div class="legend-item"><div class="legend-dot" style="background:rgba(74,79,106,0.2);border-color:#4a4f6a;border-style:dashed"></div> Dead</div>
+    <div class="r-legend">
+      <div class="r-legend-item"><div class="r-legend-dot" style="background:rgba(57,211,83,0.15);border-color:#39d353"></div>Follower</div>
+      <div class="r-legend-item"><div class="r-legend-dot" style="background:rgba(227,179,65,0.15);border-color:#e3b341"></div>Candidate</div>
+      <div class="r-legend-item"><div class="r-legend-dot" style="background:rgba(163,113,247,0.2);border-color:#a371f7"></div>Leader</div>
+      <div class="r-legend-item"><div class="r-legend-dot" style="background:rgba(74,79,106,0.2);border-color:#4a4f6a;border-style:dashed"></div>Dead</div>
     </div>
   </div>
 
-  <div class="controls">
-    <button class="primary" onclick="startElection()" id="btn-elect">เริ่มเลือก leader</button>
-    <button class="danger" onclick="killLeader()" id="btn-kill">จำลอง leader ล่ม</button>
-    <button onclick="resetAll()">รีเซ็ต</button>
+  <div class="r-controls">
+    <button class="r-btn primary" onclick="rStartElection()">เริ่มเลือก leader</button>
+    <button class="r-btn danger" onclick="rKillLeader()">จำลอง leader ล่ม</button>
+    <button class="r-btn" onclick="rResetAll()">รีเซ็ต</button>
   </div>
 
-  <div class="log" id="log-box"></div>
-  <p class="hint">คลิกที่ node เพื่อ kill หรือรีสตาร์ท — ลองให้ dead เกิน 2 เพื่อดู quorum failure</p>
+  <div class="r-log" id="r-log-box"></div>
+  <p class="r-hint">คลิกที่ node เพื่อ kill/รีสตาร์ท — ลองให้ dead เกิน quorum เพื่อดู quorum failure</p>
+</div>
+</div>
 </div>
 
 <script>
-const POS = [
+// ══════════════════════════════════════════
+//  TAB SWITCHING
+// ══════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['swarm','raft'][i]===name));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(name==='raft') { rBuildSVG(); rUpdateStats(); }
+  if(name==='swarm') { document.getElementById('cmd-input').focus(); }
+}
+
+// ══════════════════════════════════════════
+//  SWARM TERMINAL STATE
+// ══════════════════════════════════════════
+let swarm = {
+  active: false,
+  advertiseAddr: '192.168.1.100',
+  nodeIdCounter: 1,
+  nodes: [],
+  services: {},
+  joinTokens: {
+    worker:  'SWMTKN-1-3ej94b5xxxxxxxxxworker-abcdef1234567890',
+    manager: 'SWMTKN-1-3ej94b5xxxxxxxxxmanager-fedcba0987654321'
+  }
+};
+let cmdHistory = [], histIdx = -1;
+
+function makeNodeId() {
+  const c='abcdefghijklmnopqrstuvwxyz0123456789';
+  return Array.from({length:12},()=>c[Math.floor(Math.random()*c.length)]).join('').match(/.{1,4}/g).join('');
+}
+function makeIp(i) { return `192.168.1.${100+i}`; }
+function getLeader() { return swarm.nodes.find(n=>n.leader); }
+
+// ── Terminal print helpers ──
+function tPrint(text, cls='out') {
+  const out = document.getElementById('term-out');
+  const el = document.createElement('div');
+  el.className = cls;
+  el.textContent = text;
+  out.appendChild(el);
+  out.scrollTop = out.scrollHeight;
+}
+function tPrintCmd(cmd) {
+  const out = document.getElementById('term-out');
+  const el = document.createElement('div');
+  el.className = 't-line';
+  el.innerHTML = `<span class="t-prompt">${document.getElementById('prompt-label').textContent}&nbsp;</span><span class="t-cmd">${esc(cmd)}</span>`;
+  out.appendChild(el);
+  out.scrollTop = out.scrollHeight;
+}
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function tBlank(){ tPrint(''); }
+
+// ── Commands ──
+function parseCmd(raw) {
+  const cmd = raw.trim();
+  if(tCommands[cmd]) { tCommands[cmd](); return; }
+  const m = (pat) => cmd.match(pat);
+  let x;
+  if(x=m(/^docker node inspect (.+)$/)) { nodeInspect(x[1]); return; }
+  if(x=m(/^docker node promote (.+)$/)) { nodePromote(x[1]); return; }
+  if(x=m(/^docker node demote (.+)$/))  { nodeDemote(x[1]); return; }
+  if(x=m(/^docker node rm (.+)$/))      { nodeRm(x[1]); return; }
+  if(x=m(/^docker node update --availability (drain|active|pause) (.+)$/)) { nodeAvail(x[2],x[1]); return; }
+  if(cmd.startsWith('docker service create')) { serviceCreate(cmd); return; }
+  if(x=m(/^docker service ps (.+)$/))   { servicePs(x[1]); return; }
+  if(x=m(/^docker service scale (.+)=(\d+)$/)) { serviceScale(x[1],parseInt(x[2])); return; }
+  if(x=m(/^docker service rm (.+)$/))   { serviceRm(x[1]); return; }
+  if(x=m(/^docker service update --replicas (\d+) (.+)$/)) { serviceScale(x[2],parseInt(x[1])); return; }
+  if(cmd.startsWith('docker swarm join')) { swarmJoin('worker'); return; }
+  if(cmd==='docker info')    { dockerInfo(); return; }
+  if(cmd==='docker version') { dockerVersion(); return; }
+  tBlank(); tPrint('command not found: '+cmd,'out err');
+  tPrint('พิมพ์ "help" เพื่อดูคำสั่งทั้งหมด','out dim'); tBlank();
+}
+
+const tCommands = {
+  'help': () => {
+    tBlank();
+    tPrint('Docker Swarm Simulator — คำสั่งที่รองรับ','out head');
+    tPrint('─────────────────────────────────────────────────────','out dim');
+    tPrint('  docker swarm init','out info');
+    tPrint('  docker swarm join-token worker / manager','out info');
+    tPrint('  docker swarm leave --force','out info');
+    tPrint('  docker node ls / inspect / promote / demote / rm','out ok');
+    tPrint('  docker node update --availability drain <node>','out ok');
+    tPrint('  docker service create --name <n> --replicas <r> <image>','out warn');
+    tPrint('  docker service ls / ps / scale / rm','out warn');
+    tPrint('  docker info / docker version','out dim');
+    tPrint('  clear / reset','out dim');
+    tBlank();
+  },
+  'docker swarm init': () => {
+    if(swarm.active){ tPrint('Error: Already part of a swarm.','out err'); return; }
+    const id=makeNodeId();
+    swarm.nodes.push({id,hostname:'node1',ip:swarm.advertiseAddr,role:'manager',availability:'Active',status:'Ready',leader:true});
+    swarm.active=true; swarm.nodeIdCounter=2;
+    tBlank();
+    tPrint('Swarm initialized: current node ('+id+') is now a manager.','out ok'); tBlank();
+    tPrint('To add a worker to this swarm, run:','out');
+    tPrint('    docker swarm join --token '+swarm.joinTokens.worker+' \\','out info');
+    tPrint('      '+swarm.advertiseAddr+':2377','out info'); tBlank();
+    updatePrompt(); renderViz();
+  },
+  'docker swarm join-token worker': () => {
+    if(!swarm.active){tPrint('Error: Not a swarm manager.','out err');return;}
+    tBlank(); tPrint('    docker swarm join --token '+swarm.joinTokens.worker+' \\','out info');
+    tPrint('      '+swarm.advertiseAddr+':2377','out info'); tBlank();
+  },
+  'docker swarm join-token manager': () => {
+    if(!swarm.active){tPrint('Error: Not a swarm manager.','out err');return;}
+    tBlank(); tPrint('    docker swarm join --token '+swarm.joinTokens.manager+' \\','out info');
+    tPrint('      '+swarm.advertiseAddr+':2377','out info'); tBlank();
+  },
+  'docker swarm leave --force': () => {
+    if(!swarm.active){tPrint('Error: Not part of a swarm.','out err');return;}
+    swarm={active:false,advertiseAddr:'192.168.1.100',nodeIdCounter:1,nodes:[],services:{},joinTokens:swarm.joinTokens};
+    tPrint('Node left the swarm.','out ok'); updatePrompt(); renderViz();
+  },
+  'docker node ls': () => {
+    if(!swarm.active){tPrint('Error: Not a swarm manager.','out err');return;}
+    tBlank();
+    tPrint('ID                          HOSTNAME   STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION','out head');
+    tPrint('─'.repeat(90),'out dim');
+    swarm.nodes.forEach(n=>{
+      const mc=n.role==='manager'?(n.leader?'Leader':'Reachable'):'';
+      const line=[
+        (n.hostname==='node1'?n.id+'  *':n.id+'   ').padEnd(30),
+        n.hostname.padEnd(12),n.status.padEnd(10),n.availability.padEnd(15),mc.padEnd(17),'24.0.7'
+      ].join('  ');
+      tPrint(line, n.status==='Ready'?'out ok':'out err');
+    }); tBlank();
+  },
+  'docker service ls': () => {
+    if(!swarm.active){tPrint('Error: Not a swarm manager.','out err');return;}
+    const svcs=Object.values(swarm.services);
+    tBlank();
+    tPrint('ID             NAME       MODE         REPLICAS   IMAGE            PORTS','out head');
+    tPrint('─'.repeat(70),'out dim');
+    if(!svcs.length){tPrint('(no services)','out dim');}
+    svcs.forEach(s=>{
+      tPrint([makeNodeId().slice(0,12).padEnd(15),s.name.padEnd(11),'replicated'.padEnd(13),(s.running+'/'+s.replicas).padEnd(11),(s.image+':latest').padEnd(17),s.ports||''].join('  '),'out');
+    }); tBlank();
+  },
+  'clear': () => { document.getElementById('term-out').innerHTML=''; },
+  'reset': () => {
+    document.getElementById('term-out').innerHTML='';
+    swarm={active:false,advertiseAddr:'192.168.1.100',nodeIdCounter:1,nodes:[],services:{},joinTokens:swarm.joinTokens};
+    updatePrompt(); renderViz(); printWelcome();
+  }
+};
+
+function addWorker()  { runCmd('docker swarm join --token '+swarm.joinTokens.worker+' '+swarm.advertiseAddr+':2377'); }
+function addManager() { runCmd('docker swarm join --token '+swarm.joinTokens.manager+' '+swarm.advertiseAddr+':2377'); }
+
+function swarmJoin(role) {
+  if(!swarm.active){tPrint('Error: No active swarm.','out err');return;}
+  // detect role from token
+  const raw = document.getElementById('cmd-input').value || '';
+  const isManager = raw.includes(swarm.joinTokens.manager);
+  const actualRole = isManager ? 'manager' : role;
+  const n=swarm.nodeIdCounter++;
+  swarm.nodes.push({id:makeNodeId(),hostname:'node'+n,ip:makeIp(n),role:actualRole,availability:'Active',status:'Ready',leader:false});
+  tBlank(); tPrint('This node joined a swarm as a '+actualRole+'.','out ok'); tBlank();
+  updatePrompt(); renderViz();
+}
+
+function nodeInspect(name) {
+  if(!swarm.active){tPrint('Error: Not a swarm manager.','out err');return;}
+  const n=swarm.nodes.find(x=>x.hostname===name||x.id===name);
+  if(!n){tPrint('Error: node '+name+' not found','out err');return;}
+  tBlank();
+  tPrint('  "ID": "'+n.id+'"','out');
+  tPrint('  "Hostname": "'+n.hostname+'"','out');
+  tPrint('  "Status": "'+n.status+'"', n.status==='Ready'?'out ok':'out err');
+  tPrint('  "Role": "'+n.role+'"','out');
+  tPrint('  "Availability": "'+n.availability+'"','out');
+  if(n.role==='manager') tPrint('  "Leader": '+n.leader,'n.leader?\'out ok\':\'out\'');
+  tBlank();
+}
+
+function nodePromote(name) {
+  if(!swarm.active){tPrint('Error: Not a swarm manager.','out err');return;}
+  const n=swarm.nodes.find(x=>x.hostname===name||x.id===name);
+  if(!n){tPrint('Error: node '+name+' not found','out err');return;}
+  if(n.role==='manager'){tPrint('Node '+name+' is already a manager.','out warn');return;}
+  n.role='manager';
+  tPrint('Node '+name+' promoted to a manager in the swarm.','out ok'); renderViz();
+}
+
+function nodeDemote(name) {
+  if(!swarm.active){tPrint('Error: Not a swarm manager.','out err');return;}
+  const n=swarm.nodes.find(x=>x.hostname===name||x.id===name);
+  if(!n){tPrint('Error: node '+name+' not found','out err');return;}
+  if(n.leader){tPrint('Error: cannot demote the current leader.','out err');return;}
+  if(n.role==='worker'){tPrint('Node '+name+' is already a worker.','out warn');return;}
+  n.role='worker';
+  tPrint('Manager '+name+' demoted in the swarm.','out ok'); renderViz();
+}
+
+function nodeRm(name) {
+  if(!swarm.active){tPrint('Error: Not a swarm manager.','out err');return;}
+  const idx=swarm.nodes.findIndex(x=>x.hostname===name||x.id===name);
+  if(idx<0){tPrint('Error: node '+name+' not found','out err');return;}
+  const n=swarm.nodes[idx];
+  if(n.leader){tPrint('Error: cannot remove the current leader.','out err');return;}
+  if(n.status==='Ready'){tPrint('Error: drain the node first.','out err');return;}
+  swarm.nodes.splice(idx,1);
+  tBlank(); tPrint(n.id,'out ok'); tBlank(); renderViz();
+}
+
+function nodeAvail(name,avail) {
+  if(!swarm.active){tPrint('Error: Not a swarm manager.','out err');return;}
+  const n=swarm.nodes.find(x=>x.hostname===name||x.id===name);
+  if(!n){tPrint('Error: node '+name+' not found','out err');return;}
+  n.availability=avail.charAt(0).toUpperCase()+avail.slice(1);
+  n.status=avail==='drain'?'Down':'Ready';
+  // if leader goes down, pick new leader among managers
+  if(n.leader && n.status==='Down') {
+    n.leader=false;
+    const nm=swarm.nodes.find(x=>x.role==='manager'&&x.status==='Ready');
+    if(nm) nm.leader=true;
+  }
+  tBlank(); tPrint(n.id,'out ok'); tBlank(); renderViz();
+}
+
+function serviceCreate(cmd) {
+  if(!swarm.active){tPrint('Error: Not a swarm manager.','out err');return;}
+  const nameM=cmd.match(/--name\s+(\S+)/), repM=cmd.match(/--replicas\s+(\d+)/), portM=cmd.match(/-p\s+(\d+:\d+)/);
+  if(!nameM){tPrint('Error: --name is required','out err');return;}
+  const name=nameM[1];
+  if(swarm.services[name]){tPrint('Error: service "'+name+'" already exists','out err');return;}
+  const replicas=repM?parseInt(repM[1]):1;
+  const tokens=cmd.split(/\s+/); let image='nginx';
+  for(let i=tokens.length-1;i>=0;i--){if(!tokens[i].startsWith('-')&&!['create','service','docker'].includes(tokens[i])){image=tokens[i];break;}}
+  swarm.services[name]={name,image,replicas,running:replicas,ports:portM?portM[1]:''};
+  tBlank(); tPrint(makeNodeId().slice(0,12),'out ok');
+  tPrint('overall progress: '+replicas+' out of '+replicas+' tasks','out');
+  for(let i=1;i<=Math.min(replicas,5);i++) tPrint(i+'/'+replicas+': running   [==================================================>]','out ok');
+  tPrint('verify: Service converged','out ok'); tBlank(); renderViz();
+}
+
+function servicePs(name) {
+  const s=swarm.services[name];
+  if(!s){tPrint('Error: service "'+name+'" not found','out err');return;}
+  tBlank();
+  tPrint('ID             NAME        IMAGE              NODE       DESIRED STATE   CURRENT STATE','out head');
+  tPrint('─'.repeat(85),'out dim');
+  const alive=swarm.nodes.filter(n=>n.status==='Ready');
+  for(let i=0;i<s.replicas;i++){
+    const node=alive[i%alive.length];
+    tPrint([makeNodeId().slice(0,12).padEnd(15),(name+'.'+(i+1)).padEnd(12),(s.image+':latest').padEnd(19),(node?.hostname||'?').padEnd(11),'Running'.padEnd(16),'Running 2 minutes ago'].join('  '),'out ok');
+  } tBlank();
+}
+
+function serviceScale(name,n) {
+  if(!swarm.active){tPrint('Error: Not a swarm manager.','out err');return;}
+  const s=swarm.services[name];
+  if(!s){tPrint('Error: service "'+name+'" not found','out err');return;}
+  s.replicas=n; s.running=n;
+  tBlank(); tPrint(name+' scaled to '+n+' replicas','out ok');
+  tPrint('verify: Service converged','out ok'); tBlank(); renderViz();
+}
+
+function serviceRm(name) {
+  if(!swarm.services[name]){tPrint('Error: service "'+name+'" not found','out err');return;}
+  delete swarm.services[name]; tPrint(name,'out ok'); renderViz();
+}
+
+function dockerInfo() {
+  tBlank(); tPrint('Swarm: '+(swarm.active?'active':'inactive'),swarm.active?'out ok':'out');
+  if(swarm.active){tPrint('  Nodes: '+swarm.nodes.length,'out'); tPrint('  Managers: '+swarm.nodes.filter(n=>n.role==='manager').length,'out');}
+  tBlank();
+}
+
+function dockerVersion() {
+  tBlank(); tPrint('Docker Engine 24.0.7 · API 1.43 · linux/amd64','out'); tBlank();
+}
+
+function updatePrompt() {
+  document.getElementById('prompt-label').textContent = swarm.active?'node1@swarm-manager:~$':'user@host:~$';
+}
+
+function runCmd(cmd) {
+  tPrintCmd(cmd); cmdHistory.unshift(cmd); histIdx=-1; parseCmd(cmd);
+  document.getElementById('cmd-input').focus();
+}
+
+document.getElementById('cmd-input').addEventListener('keydown', e=>{
+  if(e.key==='Enter'){
+    const v=e.target.value.trim(); if(!v)return; e.target.value=''; runCmd(v);
+  }
+  if(e.key==='ArrowUp'){e.preventDefault();if(histIdx<cmdHistory.length-1){histIdx++;e.target.value=cmdHistory[histIdx]||'';}}
+  if(e.key==='ArrowDown'){e.preventDefault();if(histIdx>0){histIdx--;e.target.value=cmdHistory[histIdx]||'';}else{histIdx=-1;e.target.value='';}}
+  if(e.key==='Tab'){
+    e.preventDefault();
+    const v=e.target.value;
+    const opts=['docker swarm init','docker swarm join-token worker','docker swarm join-token manager','docker swarm leave --force','docker node ls','docker node promote ','docker node demote ','docker node rm ','docker node inspect ','docker node update --availability drain ','docker service create --name ','docker service ls','docker service ps ','docker service scale ','docker service rm ','docker info','docker version','help','clear','reset'];
+    const m=opts.find(c=>c.startsWith(v)&&c!==v); if(m)e.target.value=m;
+  }
+});
+
+// ── Visualizer ──
+let hbInterval=null, hbOffset=0;
+
+function renderViz() {
+  const body=document.getElementById('viz-body');
+  if(!swarm.active){
+    body.innerHTML=`<div style="text-align:center;padding:40px 16px;font-family:Inter,sans-serif;color:var(--text-dim);font-size:13px;"><div style="font-size:32px;margin-bottom:12px;">🐳</div><div>รัน <code style="color:var(--blue)">docker swarm init</code> เพื่อเริ่มต้น</div></div>`;
+    return;
+  }
+  const managers=swarm.nodes.filter(n=>n.role==='manager');
+  const workers=swarm.nodes.filter(n=>n.role==='worker');
+  const svcs=Object.values(swarm.services);
+  const quorum=Math.floor(managers.length/2)+1;
+  const quorumOk=managers.filter(n=>n.status==='Ready').length>=quorum;
+  let html='';
+  html+=`<div class="swarm-badge active"><div class="led"></div>Swarm Active</div>`;
+  html+=`<div class="stats-row"><div class="stat-mini"><div class="stat-mini-val">${swarm.nodes.length}</div><div class="stat-mini-lbl">Nodes</div></div><div class="stat-mini"><div class="stat-mini-val" style="color:var(--purple)">${managers.length}</div><div class="stat-mini-lbl">Managers</div></div><div class="stat-mini"><div class="stat-mini-val" style="color:var(--teal)">${workers.length}</div><div class="stat-mini-lbl">Workers</div></div></div>`;
+  html+=`<div class="section-label">Nodes (${swarm.nodes.length})</div><div class="nodes-grid">`;
+  swarm.nodes.forEach(n=>{
+    const cls=n.status!=='Ready'?'down':n.role;
+    const roleLabel=n.status!=='Ready'?'Down':(n.role==='manager'?(n.leader?'Leader':'Reachable'):'Worker');
+    const roleCls=n.status!=='Ready'?'role-down':(n.role==='manager'?('role-manager'+(n.leader?' leader':'')):'role-worker');
+    const icon=n.role==='manager'?'⚙️':'🖥️';
+    html+=`<div class="node-card ${cls}"><div class="node-top"><span>${icon}</span><span class="node-name">${n.hostname}</span><span class="node-role-badge ${roleCls}">${roleLabel}</span></div><div class="node-meta"><span>🌐 ${n.ip}</span><span>📋 ${n.id.slice(0,8)}...</span><span>${n.availability}</span></div></div>`;
+  });
+  html+=`</div>`;
+  html+=`<div style="font-family:Inter,sans-serif;font-size:11px;margin-bottom:16px;padding:8px 12px;border-radius:6px;border:1px solid ${quorumOk?'rgba(57,211,83,0.2)':'rgba(248,81,73,0.2)'};background:${quorumOk?'var(--teal-dim)':'var(--red-dim)'};color:${quorumOk?'var(--teal)':'var(--red)'};">Raft Quorum: ${managers.filter(n=>n.status==='Ready').length}/${managers.length} managers reachable (ต้องการ ${quorum}) — ${quorumOk?'✓ OK':'✗ No quorum'}</div>`;
+  if(svcs.length){
+    html+=`<div class="section-label">Services (${svcs.length})</div>`;
+    svcs.forEach(s=>{
+      const dots=Array.from({length:s.replicas},(_,i)=>`<div class="rdot ${i<s.running?'running':'pending'}"></div>`).join('');
+      html+=`<div class="service-card"><div class="svc-top"><span>📦</span><span class="svc-name">${s.name}</span><span class="svc-replicas">${s.running}/${s.replicas} running</span></div><div style="font-family:Inter,sans-serif;font-size:11px;color:var(--text-muted);margin-bottom:8px;">${s.image}:latest${s.ports?' · '+s.ports:''}</div><div class="replica-dots">${dots}</div></div>`;
+    });
+  }
+  html+=`<div style="font-family:Inter,sans-serif;font-size:11px;color:var(--text-dim);text-align:center;padding:8px;">สลับไปแท็บ Raft Election เพื่อดู algorithm เบื้องหลัง</div>`;
+  body.innerHTML=html;
+}
+
+function printWelcome() {
+  tPrint('Docker Swarm Simulator v2.0','out ok');
+  tPrint('─────────────────────────────────────────','out dim');
+  tPrint('Tab = autocomplete  ↑↓ = ประวัติคำสั่ง','out dim');
+  tPrint('เริ่มต้นด้วย: docker swarm init','out info'); tBlank();
+}
+
+// ══════════════════════════════════════════
+//  RAFT ELECTION STATE
+// ══════════════════════════════════════════
+let rState = { term:1, leader:-1, dead:[], phase:'idle', busy:false, nodes:[] };
+let rHbInterval=null, rHbOffset=0;
+
+// Default 5 nodes positions (pentagon)
+const DEFAULT_POS = [
   {x:200,y:180},{x:340,y:110},{x:490,y:110},{x:340,y:250},{x:490,y:250}
 ];
 
-let state = { term:1, leader:-1, dead:[], phase:'idle', busy:false };
-let hbInterval = null;
-let hbOffset = 0;
-
-function ts() {
-  return new Date().toLocaleTimeString('th', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+function getNodePositions(count) {
+  if(count<=5) return DEFAULT_POS.slice(0,count);
+  // dynamic circle layout for >5
+  const cx=340,cy=180,r=140;
+  return Array.from({length:count},(_,i)=>{
+    const a=(i/count)*2*Math.PI - Math.PI/2;
+    return {x:Math.round(cx+r*Math.cos(a)), y:Math.round(cy+r*Math.sin(a))};
+  });
 }
 
-function log(msg, type='') {
-  const box = document.getElementById('log-box');
-  const el = document.createElement('div');
-  el.className = 'entry';
-  el.innerHTML = `<span class="ts">${ts()}</span><span class="msg ${type}">${msg}</span>`;
-  box.prepend(el);
-  while(box.children.length > 12) box.removeChild(box.lastChild);
-}
+function rBuildSVG() {
+  const n = rState.nodes.length || 5;
+  const pos = getNodePositions(n);
+  const connLines = document.getElementById('r-conn-lines');
+  const nodesLayer = document.getElementById('r-nodes-layer');
+  connLines.innerHTML = '';
+  nodesLayer.innerHTML = '';
 
-function updateStats() {
-  document.getElementById('s-term').textContent = state.term;
-  const lbl = document.getElementById('s-leader');
-  lbl.textContent = state.leader >= 0 ? 'Node '+(state.leader+1) : '—';
-  lbl.style.color = state.leader >= 0 ? 'var(--purple)' : 'var(--text-muted)';
-
-  const ph = document.getElementById('s-phase');
-  if(state.phase==='election') { ph.textContent='กำลังเลือก...'; ph.style.color='var(--amber)'; }
-  else if(state.phase==='leader') { ph.textContent='มี Leader แล้ว'; ph.style.color='var(--teal)'; }
-  else if(state.phase==='no-quorum') { ph.textContent='Quorum ไม่พอ!'; ph.style.color='var(--red)'; }
-  else { ph.textContent='พร้อม'; ph.style.color='var(--text-muted)'; }
-
-  const alive = 5 - state.dead.length;
-  const q = Math.floor(alive/2)+1;
-  document.getElementById('quorum-txt').textContent = `Quorum = ${q} จาก ${alive} nodes ที่ยังอยู่`;
-}
-
-function styleNode(i, role) {
-  const circle = document.getElementById('nc-'+i);
-  const spin = document.getElementById('nc-spin-'+i);
-  const roleEl = document.getElementById('nr-'+i);
-
-  spin.style.animation = 'none';
-  spin.setAttribute('opacity','0');
-
-  if(state.dead.includes(i)) {
-    circle.setAttribute('fill','#0f1117');
-    circle.setAttribute('stroke','#4a4f6a');
-    circle.setAttribute('stroke-width','1');
-    circle.setAttribute('stroke-dasharray','5 3');
-    roleEl.setAttribute('fill','#4a4f6a');
-    roleEl.textContent = 'Dead';
-    return;
+  // connection lines
+  for(let i=0;i<pos.length;i++) for(let j=i+1;j<pos.length;j++){
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',pos[i].x); line.setAttribute('y1',pos[i].y);
+    line.setAttribute('x2',pos[j].x); line.setAttribute('y2',pos[j].y);
+    connLines.appendChild(line);
   }
 
-  circle.setAttribute('stroke-dasharray','none');
+  // nodes
+  for(let i=0;i<pos.length;i++){
+    const {x,y}=pos[i];
+    const label=rState.nodes[i]||('Node '+(i+1));
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('id','rn-'+i); g.setAttribute('style','cursor:pointer');
+    g.setAttribute('onclick','rToggleKill('+i+')');
+    const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('id','rnc-'+i); circle.setAttribute('cx',x); circle.setAttribute('cy',y); circle.setAttribute('r','28');
+    circle.setAttribute('fill','rgba(57,211,83,0.08)'); circle.setAttribute('stroke','#39d353'); circle.setAttribute('stroke-width','1.5');
+    const spin=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    spin.setAttribute('id','rns-'+i); spin.setAttribute('cx',x); spin.setAttribute('cy',y); spin.setAttribute('r','35');
+    spin.setAttribute('fill','none'); spin.setAttribute('stroke','#a371f7'); spin.setAttribute('stroke-width','2');
+    spin.setAttribute('stroke-dasharray','18 60'); spin.setAttribute('opacity','0'); spin.setAttribute('stroke-linecap','round');
+    const t1=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t1.setAttribute('x',x); t1.setAttribute('y',y-5); t1.setAttribute('text-anchor','middle');
+    t1.setAttribute('dominant-baseline','central'); t1.setAttribute('font-size','11'); t1.setAttribute('font-weight','600');
+    t1.setAttribute('fill','#e6edf3'); t1.setAttribute('font-family','Inter,sans-serif'); t1.textContent=label;
+    const t2=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t2.setAttribute('id','rnr-'+i); t2.setAttribute('x',x); t2.setAttribute('y',y+11);
+    t2.setAttribute('text-anchor','middle'); t2.setAttribute('dominant-baseline','central');
+    t2.setAttribute('font-size','10'); t2.setAttribute('fill','#39d353'); t2.setAttribute('font-family','Inter,sans-serif');
+    t2.textContent='Follower';
+    g.appendChild(circle); g.appendChild(spin); g.appendChild(t1); g.appendChild(t2);
+    nodesLayer.appendChild(g);
+  }
+}
 
-  if(role==='leader') {
-    circle.setAttribute('fill','rgba(139,124,248,0.18)');
-    circle.setAttribute('stroke','#8b7cf8');
-    circle.setAttribute('stroke-width','2.5');
-    roleEl.setAttribute('fill','#8b7cf8');
-    roleEl.textContent = 'Leader';
-  } else if(role==='candidate') {
-    circle.setAttribute('fill','rgba(245,166,35,0.15)');
-    circle.setAttribute('stroke','#f5a623');
-    circle.setAttribute('stroke-width','2');
-    spin.setAttribute('opacity','1');
-    spin.style.animation = 'none';
-    void spin.offsetWidth;
-    spin.style.animation = 'candidate-spin 1.4s linear infinite';
-    roleEl.setAttribute('fill','#f5a623');
-    roleEl.textContent = 'Candidate';
+function rStyleNode(i,role) {
+  const c=document.getElementById('rnc-'+i);
+  const s=document.getElementById('rns-'+i);
+  const r=document.getElementById('rnr-'+i);
+  if(!c) return;
+  s.style.animation='none'; s.setAttribute('opacity','0');
+  if(rState.dead.includes(i)){
+    c.setAttribute('fill','#0d1117'); c.setAttribute('stroke','#4a4f6a');
+    c.setAttribute('stroke-width','1'); c.setAttribute('stroke-dasharray','4 3');
+    r.setAttribute('fill','#4a4f6a'); r.textContent='Dead'; return;
+  }
+  c.setAttribute('stroke-dasharray','none');
+  if(role==='leader'){
+    c.setAttribute('fill','rgba(163,113,247,0.18)'); c.setAttribute('stroke','#a371f7'); c.setAttribute('stroke-width','2.5');
+    r.setAttribute('fill','#a371f7'); r.textContent='Leader';
+  } else if(role==='candidate'){
+    c.setAttribute('fill','rgba(227,179,65,0.15)'); c.setAttribute('stroke','#e3b341'); c.setAttribute('stroke-width','2');
+    s.setAttribute('opacity','1'); s.style.animation='candidate-spin 1.4s linear infinite';
+    r.setAttribute('fill','#e3b341'); r.textContent='Candidate';
   } else {
-    circle.setAttribute('fill','rgba(26,217,160,0.08)');
-    circle.setAttribute('stroke','#1ad9a0');
-    circle.setAttribute('stroke-width','1.5');
-    roleEl.setAttribute('fill','#1ad9a0');
-    roleEl.textContent = 'Follower';
+    c.setAttribute('fill','rgba(57,211,83,0.08)'); c.setAttribute('stroke','#39d353'); c.setAttribute('stroke-width','1.5');
+    r.setAttribute('fill','#39d353'); r.textContent='Follower';
   }
 }
 
-function animateMsg(from, to, color) {
-  return new Promise(resolve => {
-    const svg = document.getElementById('msg-layer');
-    const f = POS[from], t = POS[to];
-    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
-    c.setAttribute('r','5');
-    c.setAttribute('fill', color);
-    c.setAttribute('cx', f.x);
-    c.setAttribute('cy', f.y);
+function rUpdateStats() {
+  document.getElementById('r-term').textContent=rState.term;
+  const lbl=document.getElementById('r-leader');
+  const n=rState.nodes.length||5;
+  lbl.textContent=rState.leader>=0?(rState.nodes[rState.leader]||'Node '+(rState.leader+1)):'—';
+  lbl.style.color=rState.leader>=0?'var(--purple)':'var(--text-muted)';
+  const ph=document.getElementById('r-phase');
+  if(rState.phase==='election'){ph.textContent='กำลังเลือก...';ph.style.color='var(--amber)';}
+  else if(rState.phase==='leader'){ph.textContent='มี Leader แล้ว';ph.style.color='var(--teal)';}
+  else if(rState.phase==='no-quorum'){ph.textContent='Quorum ไม่พอ!';ph.style.color='var(--red)';}
+  else{ph.textContent='พร้อม';ph.style.color='var(--text-muted)';}
+  const alive=n-rState.dead.length;
+  document.getElementById('r-quorum-txt').textContent='Quorum = '+(Math.floor(alive/2)+1)+' จาก '+alive+' nodes ที่ยังอยู่';
+}
+
+function rLog(msg,type='') {
+  const box=document.getElementById('r-log-box');
+  const el=document.createElement('div'); el.className='entry';
+  const t=new Date().toLocaleTimeString('th',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.innerHTML=`<span class="ts">${t}</span><span class="msg ${type}">${msg}</span>`;
+  box.prepend(el);
+  while(box.children.length>12) box.removeChild(box.lastChild);
+}
+
+function rAnimMsg(from,to,color) {
+  return new Promise(resolve=>{
+    const n=rState.nodes.length||5;
+    const pos=getNodePositions(n);
+    if(!pos[from]||!pos[to]){resolve();return;}
+    const svg=document.getElementById('r-msg-layer');
+    const f=pos[from],t=pos[to];
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('r','5'); c.setAttribute('fill',color);
+    c.setAttribute('cx',f.x); c.setAttribute('cy',f.y);
     svg.appendChild(c);
-    let start = null;
-    function step(ts) {
-      if(!start) start = ts;
-      const p = Math.min((ts-start)/480, 1);
-      c.setAttribute('cx', f.x + (t.x-f.x)*p);
-      c.setAttribute('cy', f.y + (t.y-f.y)*p);
-      c.setAttribute('opacity', 1 - p*0.5);
-      if(p < 1) requestAnimationFrame(step);
-      else { svg.removeChild(c); resolve(); }
+    let start=null;
+    function step(ts){
+      if(!start)start=ts;
+      const p=Math.min((ts-start)/480,1);
+      c.setAttribute('cx',f.x+(t.x-f.x)*p); c.setAttribute('cy',f.y+(t.y-f.y)*p);
+      c.setAttribute('opacity',1-p*0.5);
+      if(p<1)requestAnimationFrame(step); else{svg.removeChild(c);resolve();}
     }
     requestAnimationFrame(step);
   });
 }
 
-function startHeartbeat(leaderIdx) {
-  stopHeartbeat();
-  const hbLines = document.getElementById('hb-lines');
-  const alive = [0,1,2,3,4].filter(i => !state.dead.includes(i) && i !== leaderIdx);
-  // rebuild hb lines from leader to each alive follower
-  hbLines.innerHTML = '';
-  hbLines.setAttribute('opacity','1');
-  alive.forEach((i,idx) => {
-    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1', POS[leaderIdx].x);
-    line.setAttribute('y1', POS[leaderIdx].y);
-    line.setAttribute('x2', POS[i].x);
-    line.setAttribute('y2', POS[i].y);
-    line.setAttribute('stroke','#8b7cf8');
-    line.setAttribute('stroke-width','0.8');
+function rStartHb(leaderIdx) {
+  rStopHb();
+  const n=rState.nodes.length||5;
+  const pos=getNodePositions(n);
+  const hb=document.getElementById('r-hb-lines');
+  hb.innerHTML=''; hb.setAttribute('opacity','1');
+  [0,1,2,3,4,5,6].slice(0,n).filter(i=>!rState.dead.includes(i)&&i!==leaderIdx).forEach(i=>{
+    if(!pos[i]) return;
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',pos[leaderIdx].x); line.setAttribute('y1',pos[leaderIdx].y);
+    line.setAttribute('x2',pos[i].x); line.setAttribute('y2',pos[i].y);
+    line.setAttribute('stroke','#a371f7'); line.setAttribute('stroke-width','0.8');
     line.setAttribute('stroke-dasharray','5 5');
-    line.setAttribute('id','hb-dyn-'+i);
-    hbLines.appendChild(line);
+    hb.appendChild(line);
   });
-  hbInterval = setInterval(() => {
-    hbOffset -= 2;
-    hbLines.querySelectorAll('line').forEach(l => {
-      l.setAttribute('stroke-dashoffset', hbOffset);
-    });
-  }, 40);
+  rHbInterval=setInterval(()=>{
+    rHbOffset-=2;
+    hb.querySelectorAll('line').forEach(l=>l.setAttribute('stroke-dashoffset',rHbOffset));
+  },40);
 }
 
-function stopHeartbeat() {
-  if(hbInterval) { clearInterval(hbInterval); hbInterval = null; }
-  const hbLines = document.getElementById('hb-lines');
-  hbLines.setAttribute('opacity','0');
-  hbLines.innerHTML = '';
+function rStopHb() {
+  if(rHbInterval){clearInterval(rHbInterval);rHbInterval=null;}
+  const hb=document.getElementById('r-hb-lines');
+  hb.setAttribute('opacity','0'); hb.innerHTML='';
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-async function startElection() {
-  if(state.busy) return;
-  state.busy = true;
-  stopHeartbeat();
-  state.term++;
-  state.leader = -1;
-  state.phase = 'election';
-  updateStats();
+async function rStartElection() {
+  if(rState.busy) return;
+  rState.busy=true; rStopHb();
+  rState.term++; rState.leader=-1; rState.phase='election';
+  rUpdateStats();
+  const n=rState.nodes.length||5;
+  const alive=Array.from({length:n},(_,i)=>i).filter(i=>!rState.dead.includes(i));
+  const quorum=Math.floor(alive.length/2)+1;
+  if(alive.length<3){
+    rState.phase='no-quorum';
+    rLog('ไม่มี quorum — node ที่เหลือ('+alive.length+') น้อยกว่า 3','err');
+    rUpdateStats(); rState.busy=false; return;
+  }
+  const candidate=alive[Math.floor(Math.random()*alive.length)];
+  const cName=rState.nodes[candidate]||'Node '+(candidate+1);
+  rLog('Term '+rState.term+': '+cName+' หมด heartbeat timeout','warn');
+  alive.forEach(i=>rStyleNode(i,i===candidate?'candidate':'follower'));
+  await sleep(700);
+  rLog(cName+' ส่ง RequestVote ไปทุก node','warn');
+  let votes=1;
+  for(const i of alive){
+    if(i===candidate) continue;
+    await rAnimMsg(candidate,i,'#e3b341'); await sleep(180);
+    const grant=Math.random()>0.08;
+    const iName=rState.nodes[i]||'Node '+(i+1);
+    if(grant){
+      votes++; await rAnimMsg(i,candidate,'#a371f7');
+      rLog(iName+' → โหวตให้ '+cName+' ('+votes+'/'+quorum+')','ok');
+    } else { rLog(iName+' → ปฏิเสธ','warn'); }
+    await sleep(200);
+    if(votes>=quorum) break;
+  }
+  await sleep(350);
+  if(votes>=quorum){
+    rState.leader=candidate; rState.phase='leader';
+    alive.forEach(i=>rStyleNode(i,i===candidate?'leader':'follower'));
+    rLog(cName+' ได้ '+votes+'/'+alive.length+' เสียง → เป็น Leader','ok');
+    rStartHb(candidate);
+  } else {
+    rState.phase='no-quorum';
+    alive.forEach(i=>rStyleNode(i,'follower'));
+    rLog('ได้เสียงไม่พอ → รอ election timeout แล้วลอง term ใหม่','err');
+  }
+  rUpdateStats(); rState.busy=false;
+}
 
-  const alive = [0,1,2,3,4].filter(i => !state.dead.includes(i));
-  const quorum = Math.floor(alive.length/2)+1;
+async function rKillLeader() {
+  if(rState.leader<0){rLog('ยังไม่มี leader — กด "เริ่มเลือก leader" ก่อน','warn');return;}
+  if(rState.busy) return;
+  const old=rState.leader;
+  const oldName=rState.nodes[old]||'Node '+(old+1);
+  rState.dead.push(old); rState.leader=-1; rState.phase='idle';
+  rStopHb(); rStyleNode(old,'dead');
+  rLog(oldName+' (Leader) ล่ม — หยุดส่ง heartbeat','err');
+  rUpdateStats(); await sleep(900);
+  rLog('Followers หมด election timeout → เริ่ม election ใหม่','warn');
+  await sleep(500); rStartElection();
+}
 
-  if(alive.length < 3) {
-    state.phase = 'no-quorum';
-    log('ไม่มี quorum — node ที่เหลือ('+alive.length+') น้อยกว่า 3', 'err');
-    updateStats();
-    state.busy = false;
+function rToggleKill(i) {
+  if(rState.busy) return;
+  if(rState.dead.includes(i)){
+    rState.dead=rState.dead.filter(d=>d!==i);
+    if(rState.leader===i) rState.leader=-1;
+    rStyleNode(i,'follower');
+    rLog((rState.nodes[i]||'Node '+(i+1))+' กลับมาออนไลน์ → Follower','ok');
+  } else {
+    if(rState.dead.length>=Math.floor((rState.nodes.length||5)/2)){rLog('dead มากเกิน quorum','err');return;}
+    rState.dead.push(i);
+    if(rState.leader===i){rState.leader=-1;rState.phase='idle';rStopHb();}
+    rStyleNode(i,'dead');
+    rLog((rState.nodes[i]||'Node '+(i+1))+' ถูก kill (คลิกอีกครั้งเพื่อรีสตาร์ท)','warn');
+  }
+  rUpdateStats();
+}
+
+function rResetAll() {
+  const n=rState.nodes.length||5;
+  rState={term:1,leader:-1,dead:[],phase:'idle',busy:false,nodes:rState.nodes};
+  rStopHb(); document.getElementById('r-msg-layer').innerHTML='';
+  document.getElementById('r-log-box').innerHTML='';
+  Array.from({length:n},(_,i)=>i).forEach(i=>rStyleNode(i,'follower'));
+  rUpdateStats(); rLog('รีเซ็ตแล้ว','ok');
+}
+
+// ── Bridge: sync swarm nodes → raft ──
+function syncRaftFromSwarm() {
+  if(!swarm.active||swarm.nodes.length===0){
+    rLog('ยังไม่มี Swarm — ไปที่แท็บ Swarm Terminal แล้วรัน docker swarm init ก่อน','warn');
     return;
   }
-
-  const candidate = alive[Math.floor(Math.random()*alive.length)];
-  log('Term '+state.term+': Node '+(candidate+1)+' หมด heartbeat timeout', 'warn');
-  alive.forEach(i => styleNode(i, i===candidate?'candidate':'follower'));
-  await sleep(700);
-  log('Node '+(candidate+1)+' ส่ง RequestVote ไปทุก node', 'warn');
-
-  let votes = 1;
-  for(const i of alive) {
-    if(i===candidate) continue;
-    await animateMsg(candidate, i, '#f5a623');
-    await sleep(180);
-    const grant = !state.dead.includes(i) && Math.random() > 0.08;
-    if(grant) {
-      votes++;
-      await animateMsg(i, candidate, '#8b7cf8');
-      log('Node '+(i+1)+' → โหวตให้ Node '+(candidate+1)+' ('+votes+'/'+quorum+')', 'ok');
-    } else {
-      log('Node '+(i+1)+' → ปฏิเสธ (term สูงกว่า หรือ log ไม่ match)', 'warn');
-    }
-    await sleep(200);
-    if(votes >= quorum) break;
+  const managers=swarm.nodes.filter(n=>n.role==='manager');
+  if(managers.length<2){
+    rLog('ต้องมี Manager อย่างน้อย 2 node — ลอง promote node เพิ่ม','warn'); return;
   }
-
-  await sleep(350);
-
-  if(votes >= quorum) {
-    state.leader = candidate;
-    state.phase = 'leader';
-    alive.forEach(i => styleNode(i, i===candidate?'leader':'follower'));
-    log('Node '+(candidate+1)+' ได้ '+votes+'/'+alive.length+' เสียง → เป็น Leader', 'ok');
-    log('ส่ง AppendEntries heartbeat ทุก 150ms', 'ok');
-    startHeartbeat(candidate);
-  } else {
-    state.phase = 'no-quorum';
-    alive.forEach(i => styleNode(i,'follower'));
-    log('ได้เสียงไม่พอ → รอ election timeout แล้วลอง term ใหม่', 'err');
-  }
-
-  updateStats();
-  state.busy = false;
+  rState={term:rState.term,leader:-1,dead:[],phase:'idle',busy:false,nodes:managers.map(n=>n.hostname)};
+  rBuildSVG(); managers.forEach((_,i)=>rStyleNode(i,'follower'));
+  rUpdateStats();
+  rLog('ซิงค์ '+managers.length+' manager nodes จาก Swarm Terminal แล้ว','ok');
+  rLog('กด "เริ่มเลือก leader" เพื่อดู Raft election','ok');
 }
 
-async function killLeader() {
-  if(state.leader < 0) { log('ยังไม่มี leader — กด "เริ่มเลือก leader" ก่อนครับ', 'warn'); return; }
-  if(state.busy) return;
-  const old = state.leader;
-  state.dead.push(old);
-  state.leader = -1;
-  state.phase = 'idle';
-  stopHeartbeat();
-  styleNode(old, 'dead');
-  log('Node '+(old+1)+' (Leader) ล่ม — หยุดส่ง heartbeat', 'err');
-  updateStats();
-  await sleep(900);
-  log('Followers หมด election timeout → เริ่ม election ใหม่', 'warn');
-  await sleep(500);
-  startElection();
-}
-
-function toggleKill(i) {
-  if(state.busy) return;
-  if(state.dead.includes(i)) {
-    state.dead = state.dead.filter(d => d!==i);
-    if(state.leader === i) state.leader = -1;
-    styleNode(i,'follower');
-    log('Node '+(i+1)+' กลับมาออนไลน์ → Follower', 'ok');
-  } else {
-    if(state.dead.length >= 3) { log('dead มากเกิน — cluster หยุดทำงาน', 'err'); return; }
-    state.dead.push(i);
-    if(state.leader===i) { state.leader=-1; state.phase='idle'; stopHeartbeat(); }
-    styleNode(i,'dead');
-    log('Node '+(i+1)+' ถูก kill (คลิกอีกครั้งเพื่อรีสตาร์ท)', 'warn');
-  }
-  updateStats();
-}
-
-function resetAll() {
-  state = {term:1, leader:-1, dead:[], phase:'idle', busy:false};
-  stopHeartbeat();
-  document.getElementById('msg-layer').innerHTML='';
-  document.getElementById('log-box').innerHTML='';
-  [0,1,2,3,4].forEach(i => {
-    const circle = document.getElementById('nc-'+i);
-    circle.setAttribute('stroke-dasharray','none');
-    styleNode(i,'follower');
-  });
-  updateStats();
-  log('รีเซ็ตแล้ว — 5 nodes พร้อมใช้งาน', 'ok');
-}
-
-// init
-updateStats();
-log('พร้อม — กด "เริ่มเลือก leader" เพื่อเริ่ม simulation', 'ok');
+// ── Init ──
+printWelcome();
+renderViz();
+rBuildSVG();
+rUpdateStats();
+rLog('พร้อม — กด "เริ่มเลือก leader" หรือซิงค์จาก Swarm Terminal','ok');
 </script>
 </body>
 </html>
