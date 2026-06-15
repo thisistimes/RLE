@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raft Leader Election — Docker Swarm</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: rgba(255,255,255,0.08);
+    --text: #e8eaf0;
+    --text-muted: #7a7f9a;
+    --teal: #1ad9a0;
+    --teal-dim: rgba(26,217,160,0.12);
+    --amber: #f5a623;
+    --amber-dim: rgba(245,166,35,0.12);
+    --purple: #8b7cf8;
+    --purple-dim: rgba(139,124,248,0.14);
+    --red: #ff5f6d;
+    --red-dim: rgba(255,95,109,0.1);
+    --gray: #4a4f6a;
+    --gray-dim: rgba(74,79,106,0.15);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 720px;
+  }
+
+  /* Stat row */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    transition: color 0.3s;
+  }
+
+  /* SVG canvas */
+  .svg-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  /* Buttons */
+  .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    letter-spacing: 0.1px;
+  }
+
+  button:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.15); }
+  button:active { transform: scale(0.97); }
+
+  button.primary {
+    background: var(--purple-dim);
+    border-color: var(--purple);
+    color: var(--purple);
+  }
+  button.primary:hover { background: rgba(139,124,248,0.22); }
+
+  button.danger {
+    background: var(--red-dim);
+    border-color: var(--red);
+    color: var(--red);
+  }
+  button.danger:hover { background: rgba(255,95,109,0.18); }
+
+  /* Log */
+  .log {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 12px;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    color: var(--text-muted);
+    line-height: 1.9;
+    min-height: 80px;
+    max-height: 140px;
+    overflow-y: auto;
+  }
+
+  .log .entry { display: flex; gap: 8px; }
+  .log .ts { color: var(--gray); flex-shrink: 0; }
+  .log .msg { color: var(--text); }
+  .log .msg.ok { color: var(--teal); }
+  .log .msg.warn { color: var(--amber); }
+  .log .msg.err { color: var(--red); }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1.5px solid;
+    flex-shrink: 0;
+  }
+
+  /* Hint */
+  .hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 10px;
+    text-align: center;
+  }
+
+  /* Node animations */
+  @keyframes leader-pulse {
+    0%, 100% { r: 30; }
+    50% { r: 34; }
+  }
+
+  @keyframes candidate-spin {
+    from { stroke-dashoffset: 0; }
+    to { stroke-dashoffset: -60; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Raft Leader Election</h1>
+  <p class="subtitle">จำลองการเลือก leader ใน Docker Swarm — กดปุ่มหรือคลิก node เพื่อ kill/รีสตาร์ท</p>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Term (รอบ)</div>
+      <div class="stat-value" id="s-term">1</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Leader</div>
+      <div class="stat-value" id="s-leader" style="color:var(--purple)">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">สถานะ</div>
+      <div class="stat-value" id="s-phase" style="font-size:14px">พร้อม</div>
+    </div>
+  </div>
+
+  <div class="svg-wrap">
+    <svg id="raft-svg" width="100%" viewBox="0 0 680 360" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <filter id="glow-purple">
+          <feGaussianBlur stdDeviation="4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-teal">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- Connection lines -->
+      <g id="conn-lines" stroke="rgba(255,255,255,0.06)" stroke-width="1" fill="none">
+        <line x1="200" y1="180" x2="340" y2="110"/>
+        <line x1="200" y1="180" x2="340" y2="250"/>
+        <line x1="200" y1="180" x2="490" y2="110"/>
+        <line x1="200" y1="180" x2="490" y2="250"/>
+        <line x1="340" y1="110" x2="490" y2="110"/>
+        <line x1="340" y1="250" x2="490" y2="250"/>
+        <line x1="340" y1="110" x2="490" y2="250"/>
+        <line x1="340" y1="250" x2="490" y2="110"/>
+        <line x1="340" y1="110" x2="340" y2="250"/>
+      </g>
+
+      <!-- Heartbeat lines (active when leader exists) -->
+      <g id="hb-lines" opacity="0" stroke-width="0.8" fill="none" stroke-dasharray="4 4">
+        <line id="hb-0" x1="200" y1="180" x2="340" y2="110" stroke="#8b7cf8"/>
+        <line id="hb-1" x1="200" y1="180" x2="340" y2="250" stroke="#8b7cf8"/>
+        <line id="hb-2" x1="200" y1="180" x2="490" y2="110" stroke="#8b7cf8"/>
+        <line id="hb-3" x1="200" y1="180" x2="490" y2="250" stroke="#8b7cf8"/>
+      </g>
+
+      <!-- Vote message particles -->
+      <g id="msg-layer"></g>
+
+      <!-- Nodes -->
+      <g id="nodes-layer">
+        <!-- Node 1 -->
+        <g id="node-0" style="cursor:pointer" onclick="toggleKill(0)">
+          <circle id="nc-0" cx="200" cy="180" r="30" fill="#1a1d27" stroke="#1ad9a0" stroke-width="1.5"/>
+          <circle id="nc-spin-0" cx="200" cy="180" r="36" fill="none" stroke="#8b7cf8" stroke-width="2" stroke-dasharray="18 60" opacity="0" stroke-linecap="round"/>
+          <text x="200" y="175" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#e8eaf0" id="nt-0">Node 1</text>
+          <text x="200" y="193" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1ad9a0" id="nr-0">Follower</text>
+        </g>
+        <!-- Node 2 -->
+        <g id="node-1" style="cursor:pointer" onclick="toggleKill(1)">
+          <circle id="nc-1" cx="340" cy="110" r="30" fill="#1a1d27" stroke="#1ad9a0" stroke-width="1.5"/>
+          <circle id="nc-spin-1" cx="340" cy="110" r="36" fill="none" stroke="#8b7cf8" stroke-width="2" stroke-dasharray="18 60" opacity="0" stroke-linecap="round"/>
+          <text x="340" y="105" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#e8eaf0" id="nt-1">Node 2</text>
+          <text x="340" y="123" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1ad9a0" id="nr-1">Follower</text>
+        </g>
+        <!-- Node 3 -->
+        <g id="node-2" style="cursor:pointer" onclick="toggleKill(2)">
+          <circle id="nc-2" cx="490" cy="110" r="30" fill="#1a1d27" stroke="#1ad9a0" stroke-width="1.5"/>
+          <circle id="nc-spin-2" cx="490" cy="110" r="36" fill="none" stroke="#8b7cf8" stroke-width="2" stroke-dasharray="18 60" opacity="0" stroke-linecap="round"/>
+          <text x="490" y="105" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#e8eaf0" id="nt-2">Node 3</text>
+          <text x="490" y="123" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1ad9a0" id="nr-2">Follower</text>
+        </g>
+        <!-- Node 4 -->
+        <g id="node-3" style="cursor:pointer" onclick="toggleKill(3)">
+          <circle id="nc-3" cx="340" cy="250" r="30" fill="#1a1d27" stroke="#1ad9a0" stroke-width="1.5"/>
+          <circle id="nc-spin-3" cx="340" cy="250" r="36" fill="none" stroke="#8b7cf8" stroke-width="2" stroke-dasharray="18 60" opacity="0" stroke-linecap="round"/>
+          <text x="340" y="245" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#e8eaf0" id="nt-3">Node 4</text>
+          <text x="340" y="263" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1ad9a0" id="nr-3">Follower</text>
+        </g>
+        <!-- Node 5 -->
+        <g id="node-4" style="cursor:pointer" onclick="toggleKill(4)">
+          <circle id="nc-4" cx="490" cy="250" r="30" fill="#1a1d27" stroke="#1ad9a0" stroke-width="1.5"/>
+          <circle id="nc-spin-4" cx="490" cy="250" r="36" fill="none" stroke="#8b7cf8" stroke-width="2" stroke-dasharray="18 60" opacity="0" stroke-linecap="round"/>
+          <text x="490" y="245" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" fill="#e8eaf0" id="nt-4">Node 5</text>
+          <text x="490" y="263" text-anchor="middle" dominant-baseline="central" font-size="11" fill="#1ad9a0" id="nr-4">Follower</text>
+        </g>
+      </g>
+
+      <!-- Quorum label -->
+      <text x="340" y="330" text-anchor="middle" font-size="11" fill="rgba(255,255,255,0.2)" id="quorum-txt">Quorum = 3 จาก 5 nodes</text>
+    </svg>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(26,217,160,0.15);border-color:#1ad9a0"></div> Follower</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(245,166,35,0.15);border-color:#f5a623"></div> Candidate</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(139,124,248,0.2);border-color:#8b7cf8"></div> Leader</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(74,79,106,0.2);border-color:#4a4f6a;border-style:dashed"></div> Dead</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" onclick="startElection()" id="btn-elect">เริ่มเลือก leader</button>
+    <button class="danger" onclick="killLeader()" id="btn-kill">จำลอง leader ล่ม</button>
+    <button onclick="resetAll()">รีเซ็ต</button>
+  </div>
+
+  <div class="log" id="log-box"></div>
+  <p class="hint">คลิกที่ node เพื่อ kill หรือรีสตาร์ท — ลองให้ dead เกิน 2 เพื่อดู quorum failure</p>
+</div>
+
+<script>
+const POS = [
+  {x:200,y:180},{x:340,y:110},{x:490,y:110},{x:340,y:250},{x:490,y:250}
+];
+
+let state = { term:1, leader:-1, dead:[], phase:'idle', busy:false };
+let hbInterval = null;
+let hbOffset = 0;
+
+function ts() {
+  return new Date().toLocaleTimeString('th', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+function log(msg, type='') {
+  const box = document.getElementById('log-box');
+  const el = document.createElement('div');
+  el.className = 'entry';
+  el.innerHTML = `<span class="ts">${ts()}</span><span class="msg ${type}">${msg}</span>`;
+  box.prepend(el);
+  while(box.children.length > 12) box.removeChild(box.lastChild);
+}
+
+function updateStats() {
+  document.getElementById('s-term').textContent = state.term;
+  const lbl = document.getElementById('s-leader');
+  lbl.textContent = state.leader >= 0 ? 'Node '+(state.leader+1) : '—';
+  lbl.style.color = state.leader >= 0 ? 'var(--purple)' : 'var(--text-muted)';
+
+  const ph = document.getElementById('s-phase');
+  if(state.phase==='election') { ph.textContent='กำลังเลือก...'; ph.style.color='var(--amber)'; }
+  else if(state.phase==='leader') { ph.textContent='มี Leader แล้ว'; ph.style.color='var(--teal)'; }
+  else if(state.phase==='no-quorum') { ph.textContent='Quorum ไม่พอ!'; ph.style.color='var(--red)'; }
+  else { ph.textContent='พร้อม'; ph.style.color='var(--text-muted)'; }
+
+  const alive = 5 - state.dead.length;
+  const q = Math.floor(alive/2)+1;
+  document.getElementById('quorum-txt').textContent = `Quorum = ${q} จาก ${alive} nodes ที่ยังอยู่`;
+}
+
+function styleNode(i, role) {
+  const circle = document.getElementById('nc-'+i);
+  const spin = document.getElementById('nc-spin-'+i);
+  const roleEl = document.getElementById('nr-'+i);
+
+  spin.style.animation = 'none';
+  spin.setAttribute('opacity','0');
+
+  if(state.dead.includes(i)) {
+    circle.setAttribute('fill','#0f1117');
+    circle.setAttribute('stroke','#4a4f6a');
+    circle.setAttribute('stroke-width','1');
+    circle.setAttribute('stroke-dasharray','5 3');
+    roleEl.setAttribute('fill','#4a4f6a');
+    roleEl.textContent = 'Dead';
+    return;
+  }
+
+  circle.setAttribute('stroke-dasharray','none');
+
+  if(role==='leader') {
+    circle.setAttribute('fill','rgba(139,124,248,0.18)');
+    circle.setAttribute('stroke','#8b7cf8');
+    circle.setAttribute('stroke-width','2.5');
+    roleEl.setAttribute('fill','#8b7cf8');
+    roleEl.textContent = 'Leader';
+  } else if(role==='candidate') {
+    circle.setAttribute('fill','rgba(245,166,35,0.15)');
+    circle.setAttribute('stroke','#f5a623');
+    circle.setAttribute('stroke-width','2');
+    spin.setAttribute('opacity','1');
+    spin.style.animation = 'none';
+    void spin.offsetWidth;
+    spin.style.animation = 'candidate-spin 1.4s linear infinite';
+    roleEl.setAttribute('fill','#f5a623');
+    roleEl.textContent = 'Candidate';
+  } else {
+    circle.setAttribute('fill','rgba(26,217,160,0.08)');
+    circle.setAttribute('stroke','#1ad9a0');
+    circle.setAttribute('stroke-width','1.5');
+    roleEl.setAttribute('fill','#1ad9a0');
+    roleEl.textContent = 'Follower';
+  }
+}
+
+function animateMsg(from, to, color) {
+  return new Promise(resolve => {
+    const svg = document.getElementById('msg-layer');
+    const f = POS[from], t = POS[to];
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('r','5');
+    c.setAttribute('fill', color);
+    c.setAttribute('cx', f.x);
+    c.setAttribute('cy', f.y);
+    svg.appendChild(c);
+    let start = null;
+    function step(ts) {
+      if(!start) start = ts;
+      const p = Math.min((ts-start)/480, 1);
+      c.setAttribute('cx', f.x + (t.x-f.x)*p);
+      c.setAttribute('cy', f.y + (t.y-f.y)*p);
+      c.setAttribute('opacity', 1 - p*0.5);
+      if(p < 1) requestAnimationFrame(step);
+      else { svg.removeChild(c); resolve(); }
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+function startHeartbeat(leaderIdx) {
+  stopHeartbeat();
+  const hbLines = document.getElementById('hb-lines');
+  const alive = [0,1,2,3,4].filter(i => !state.dead.includes(i) && i !== leaderIdx);
+  // rebuild hb lines from leader to each alive follower
+  hbLines.innerHTML = '';
+  hbLines.setAttribute('opacity','1');
+  alive.forEach((i,idx) => {
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', POS[leaderIdx].x);
+    line.setAttribute('y1', POS[leaderIdx].y);
+    line.setAttribute('x2', POS[i].x);
+    line.setAttribute('y2', POS[i].y);
+    line.setAttribute('stroke','#8b7cf8');
+    line.setAttribute('stroke-width','0.8');
+    line.setAttribute('stroke-dasharray','5 5');
+    line.setAttribute('id','hb-dyn-'+i);
+    hbLines.appendChild(line);
+  });
+  hbInterval = setInterval(() => {
+    hbOffset -= 2;
+    hbLines.querySelectorAll('line').forEach(l => {
+      l.setAttribute('stroke-dashoffset', hbOffset);
+    });
+  }, 40);
+}
+
+function stopHeartbeat() {
+  if(hbInterval) { clearInterval(hbInterval); hbInterval = null; }
+  const hbLines = document.getElementById('hb-lines');
+  hbLines.setAttribute('opacity','0');
+  hbLines.innerHTML = '';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function startElection() {
+  if(state.busy) return;
+  state.busy = true;
+  stopHeartbeat();
+  state.term++;
+  state.leader = -1;
+  state.phase = 'election';
+  updateStats();
+
+  const alive = [0,1,2,3,4].filter(i => !state.dead.includes(i));
+  const quorum = Math.floor(alive.length/2)+1;
+
+  if(alive.length < 3) {
+    state.phase = 'no-quorum';
+    log('ไม่มี quorum — node ที่เหลือ('+alive.length+') น้อยกว่า 3', 'err');
+    updateStats();
+    state.busy = false;
+    return;
+  }
+
+  const candidate = alive[Math.floor(Math.random()*alive.length)];
+  log('Term '+state.term+': Node '+(candidate+1)+' หมด heartbeat timeout', 'warn');
+  alive.forEach(i => styleNode(i, i===candidate?'candidate':'follower'));
+  await sleep(700);
+  log('Node '+(candidate+1)+' ส่ง RequestVote ไปทุก node', 'warn');
+
+  let votes = 1;
+  for(const i of alive) {
+    if(i===candidate) continue;
+    await animateMsg(candidate, i, '#f5a623');
+    await sleep(180);
+    const grant = !state.dead.includes(i) && Math.random() > 0.08;
+    if(grant) {
+      votes++;
+      await animateMsg(i, candidate, '#8b7cf8');
+      log('Node '+(i+1)+' → โหวตให้ Node '+(candidate+1)+' ('+votes+'/'+quorum+')', 'ok');
+    } else {
+      log('Node '+(i+1)+' → ปฏิเสธ (term สูงกว่า หรือ log ไม่ match)', 'warn');
+    }
+    await sleep(200);
+    if(votes >= quorum) break;
+  }
+
+  await sleep(350);
+
+  if(votes >= quorum) {
+    state.leader = candidate;
+    state.phase = 'leader';
+    alive.forEach(i => styleNode(i, i===candidate?'leader':'follower'));
+    log('Node '+(candidate+1)+' ได้ '+votes+'/'+alive.length+' เสียง → เป็น Leader', 'ok');
+    log('ส่ง AppendEntries heartbeat ทุก 150ms', 'ok');
+    startHeartbeat(candidate);
+  } else {
+    state.phase = 'no-quorum';
+    alive.forEach(i => styleNode(i,'follower'));
+    log('ได้เสียงไม่พอ → รอ election timeout แล้วลอง term ใหม่', 'err');
+  }
+
+  updateStats();
+  state.busy = false;
+}
+
+async function killLeader() {
+  if(state.leader < 0) { log('ยังไม่มี leader — กด "เริ่มเลือก leader" ก่อนครับ', 'warn'); return; }
+  if(state.busy) return;
+  const old = state.leader;
+  state.dead.push(old);
+  state.leader = -1;
+  state.phase = 'idle';
+  stopHeartbeat();
+  styleNode(old, 'dead');
+  log('Node '+(old+1)+' (Leader) ล่ม — หยุดส่ง heartbeat', 'err');
+  updateStats();
+  await sleep(900);
+  log('Followers หมด election timeout → เริ่ม election ใหม่', 'warn');
+  await sleep(500);
+  startElection();
+}
+
+function toggleKill(i) {
+  if(state.busy) return;
+  if(state.dead.includes(i)) {
+    state.dead = state.dead.filter(d => d!==i);
+    if(state.leader === i) state.leader = -1;
+    styleNode(i,'follower');
+    log('Node '+(i+1)+' กลับมาออนไลน์ → Follower', 'ok');
+  } else {
+    if(state.dead.length >= 3) { log('dead มากเกิน — cluster หยุดทำงาน', 'err'); return; }
+    state.dead.push(i);
+    if(state.leader===i) { state.leader=-1; state.phase='idle'; stopHeartbeat(); }
+    styleNode(i,'dead');
+    log('Node '+(i+1)+' ถูก kill (คลิกอีกครั้งเพื่อรีสตาร์ท)', 'warn');
+  }
+  updateStats();
+}
+
+function resetAll() {
+  state = {term:1, leader:-1, dead:[], phase:'idle', busy:false};
+  stopHeartbeat();
+  document.getElementById('msg-layer').innerHTML='';
+  document.getElementById('log-box').innerHTML='';
+  [0,1,2,3,4].forEach(i => {
+    const circle = document.getElementById('nc-'+i);
+    circle.setAttribute('stroke-dasharray','none');
+    styleNode(i,'follower');
+  });
+  updateStats();
+  log('รีเซ็ตแล้ว — 5 nodes พร้อมใช้งาน', 'ok');
+}
+
+// init
+updateStats();
+log('พร้อม — กด "เริ่มเลือก leader" เพื่อเริ่ม simulation', 'ok');
+</script>
+</body>
+</html>
